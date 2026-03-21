@@ -1,0 +1,8 @@
+logs/
+.env
+__pycache__/
+*.log
+*.bat
+*.ps1
+*.sqlite3
+static/*.Identifier

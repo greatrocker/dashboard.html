@@ -1,0 +1,11 @@
+# API Server 依賴
+fastapi==0.110.0
+uvicorn==0.29.0
+pyodbc==5.1.0
+python-multipart==0.0.9
+
+# Ticker 依賴
+websocket-client==1.7.0
+pandas==2.2.0
+numpy==1.26.4
+requests==2.31.0

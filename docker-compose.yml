@@ -1,0 +1,75 @@
+
+services:
+
+  # ==============================
+  # API Server：提供 Dashboard + REST API
+  # ==============================
+  exchange-api:
+    build: .
+    container_name: exchange-monitor-api
+    restart: unless-stopped
+    command: uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - TZ=Asia/Taipei
+      - MSSQL_SERVER=${MSSQL_SERVER}
+      - MSSQL_DATABASE=${MSSQL_DATABASE}
+      - MSSQL_USER=${MSSQL_USER}
+      - MSSQL_PASSWORD=${MSSQL_PASSWORD}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./static:/app/static
+      - ./logs:/app/logs
+
+  # ==============================
+  # Bybit Ticker（獨立容器）
+  # ==============================
+  bybit-ticker:
+    build: .
+    container_name: bybit-ticker
+    restart: unless-stopped
+    command: python -u bybit_ticker.py
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - TZ=Asia/Taipei
+      - EXCHANGE=bybit
+      - MSSQL_SERVER=${MSSQL_SERVER}
+      - MSSQL_DATABASE=${MSSQL_DATABASE}
+      - MSSQL_USER=${MSSQL_USER}
+      - MSSQL_PASSWORD=${MSSQL_PASSWORD}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - HEARTBEAT_PORT=9000
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./logs:/app/logs
+
+  # ==============================
+  # Uptime Kuma
+  # ==============================
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+volumes:
+  uptime-kuma-data:

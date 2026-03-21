@@ -1,0 +1,162 @@
+================================================
+多交易所監控系統 - 完整版（含 Log 管理）
+================================================
+
+📂 檔案清單（共 13 個）：
+
+核心檔案（9 個）：
+├── requirements.txt        - Python 依賴
+├── Dockerfile              - Docker 映像檔建置
+├── docker-compose.yml      - 容器編排（已加入 log 限制）
+├── .env.example            - 環境變數範例
+├── config.py               - 交易所配置
+├── api_server.py           - FastAPI 後端（含 Log Rotation）
+├── bybit_ticker.py         - Bybit Ticker（含 Log Rotation）
+├── static/dashboard.html   - 前端 Dashboard
+└── README.md               - 詳細說明文件
+
+Log 管理工具（4 個）：
+├── clean_logs.bat          - Windows 簡易清理腳本
+├── advanced_clean.ps1      - PowerShell 進階清理（含壓縮）
+├── check_logs.bat          - Log 空間監控工具
+└── 使用說明.txt            - 本檔案
+
+================================================
+🚀 快速開始（3 步驟）
+================================================
+
+1. 設定環境變數
+   copy .env.example .env
+   notepad .env
+   （修改 MSSQL 密碼）
+
+2. 啟動服務
+   docker compose up -d --build
+
+3. 開啟 Dashboard
+   http://localhost:8000
+
+================================================
+🗑️ Log 管理機制（三層防護）
+================================================
+
+【第一層】Docker 容器 Log 限制
+- exchange-api: 最多 30MB (10MB × 3)
+- bybit-ticker: 最多 30MB (10MB × 3)  
+- uptime-kuma: 最多 10MB (5MB × 2)
+- 自動清理：超過上限自動刪除最舊檔案
+- 位置：C:\ProgramData\Docker\containers\
+
+【第二層】Python 程式 Log Rotation
+- api_server.log: 最多 60MB (10MB × 6)
+- bybit_ticker.log: 最多 60MB (10MB × 6)
+- 自動輪替：檔案超過 10MB 自動建立新檔
+- 位置：C:\exchange-monitor\logs\
+
+【第三層】定期清理腳本
+- clean_logs.bat: 刪除 7 天前的 log
+- advanced_clean.ps1: 壓縮 + 清理 + 報告
+- 建議：每週日自動執行
+
+總計：Log 最多佔用約 200MB（永不爆炸）
+
+================================================
+📋 維護指令
+================================================
+
+# 查看 Log 空間
+check_logs.bat
+
+# 手動清理（簡易版）
+clean_logs.bat
+
+# 手動清理（進階版）
+powershell -ExecutionPolicy Bypass -File advanced_clean.ps1
+
+# 查看容器狀態
+docker compose ps
+
+# 查看即時 Log
+docker compose logs -f bybit-ticker
+
+# 重啟服務
+docker compose restart
+
+# 停止服務
+docker compose down
+
+================================================
+⏰ 設定自動清理（推薦）
+================================================
+
+1. 開啟「工作排程器」（Task Scheduler）
+
+2. 建立基本工作
+   - 名稱：清理 Exchange Monitor Logs
+   - 觸發程序：每週日 凌晨 3:00
+   - 動作：啟動程式
+   - 程式：C:\exchange-monitor\clean_logs.bat
+
+3. 完成！之後就自動清理了
+
+================================================
+🆘 緊急救援（C 槽已經快滿了）
+================================================
+
+# 1. 立即停止服務
+docker compose down
+
+# 2. 手動刪除所有 log
+del /s /q logs\*.log*
+
+# 3. 深度清理 Docker
+docker system prune -a --volumes -f
+
+# 4. 重新啟動
+docker compose up -d --build
+
+================================================
+📞 常見問題
+================================================
+
+Q: Log 還是一直增長怎麼辦？
+A: 檢查 docker-compose.yml 是否有 logging 設定
+   確認 Python 檔案有使用 RotatingFileHandler
+
+Q: 清理腳本執行失敗？
+A: 以系統管理員身分執行
+   或右鍵 → 內容 → 取消唯讀
+
+Q: 怎麼看目前 Log 佔用多少空間？
+A: 執行 check_logs.bat
+
+Q: Docker 映像檔太多怎麼辦？
+A: docker image prune -f
+
+Q: 想改 Log 保留天數？
+A: 編輯 clean_logs.bat，把 -7 改成其他數字
+
+================================================
+✅ 檢查清單
+================================================
+
+安裝階段：
+□ Docker Desktop 已安裝
+□ MSSQL 資料庫已建立
+□ Bybit Table 和 SP 已建立
+□ .env 已設定密碼
+
+啟動階段：
+□ docker compose up -d 成功
+□ 3 個容器都是 Up 狀態
+□ http://localhost:8000 可訪問
+□ Dashboard 顯示「✓ DB 已連線」
+
+Log 管理：
+□ docker-compose.yml 有 logging 設定
+□ clean_logs.bat 可以執行
+□ 已設定自動排程（選填）
+
+================================================
+📄 更多資訊請參考 README.md
+================================================

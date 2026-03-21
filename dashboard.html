@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<title>Multi-Exchange Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#080c14;--panel:#0d1420;--border:#1a2540;--accent:#00e5ff;--accent2:#ff6b35;--pos:#00e676;--neg:#ff1744;--text:#c8d8f0;--dim:#5a7090;--mono:'Share Tech Mono',monospace;--display:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+#app{position:relative;z-index:1;padding:20px 28px;max-width:1600px;margin:0 auto}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.logo{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:3px;text-transform:uppercase}.logo .ex{color:var(--accent)}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.live{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:2px;color:var(--accent);text-transform:uppercase}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--pos);box-shadow:0 0 8px var(--pos);animation:pulse 1.4s ease-in-out infinite}
+.dot.err{background:var(--neg);box-shadow:0 0 8px var(--neg);animation:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.status-badge{display:inline-flex;align-items:center;gap:6px;border-radius:3px;padding:4px 10px;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.status-badge.ok{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--pos)}
+.status-badge.err{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);color:var(--neg)}
+.ctrl{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.ctrl-lbl{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+.sel-wrap{position:relative}
+.sel-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--accent);pointer-events:none;font-size:11px}
+select{appearance:none;background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 32px 8px 12px;border-radius:4px;cursor:pointer;transition:border-color .2s;min-width:150px}
+select:hover,select:focus{border-color:var(--accent);outline:none}
+select option{background:var(--panel)}
+.exchange-sel{min-width:180px;font-weight:bold;border-color:var(--accent)}
+.srch{background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 12px;border-radius:4px;transition:border-color .2s;width:180px}
+.srch::placeholder{color:var(--dim)}
+.srch:hover,.srch:focus{border-color:var(--accent);outline:none}
+.tgl{display:flex;background:var(--panel);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.tgl-btn{padding:8px 14px;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--dim);background:transparent;border:none;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.tgl-btn.on{background:var(--accent);color:var(--bg);font-weight:bold}
+.tgl-btn:hover:not(.on){color:var(--text)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.card.cs::before{background:var(--accent)}.card.cc::before{background:var(--accent2)}
+.c-lbl{font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
+.c-val{font-size:18px;font-weight:bold}
+.c-val.cyan{color:var(--accent)}.c-val.ora{color:var(--accent2)}
+.c-sub{font-size:10px;color:var(--dim);margin-top:3px}
+.tbl-wrap{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.tbl-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)}
+.tbl-title{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+.row-ct{font-size:10px;color:var(--dim)}
+table{width:100%;border-collapse:collapse}
+thead th{padding:10px 14px;text-align:right;font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;transition:color .2s;white-space:nowrap}
+thead th:hover{color:var(--accent)}
+thead th:first-child,thead th:nth-child(2){text-align:left}
+thead th.sorted{color:var(--accent)}
+tbody tr{border-bottom:1px solid rgba(26,37,64,.5);transition:background .15s}
+tbody tr:hover{background:rgba(0,229,255,.04)}
+tbody tr:last-child{border-bottom:none}
+td{padding:11px 14px;font-size:12px;text-align:right;white-space:nowrap}
+td:first-child{text-align:left}td:nth-child(2){text-align:left}
+.t-dim{color:var(--dim);font-size:11px}
+.sym-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.18);border-radius:3px;padding:2px 7px;font-size:11px;font-weight:bold;color:var(--accent)}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 5px var(--accent)}
+.pbid{color:var(--pos)}.pask{color:var(--neg)}
+.gap-cell{font-weight:bold}
+.gp{color:var(--pos)}.gn{color:var(--neg)}.gz{color:var(--dim)}.nd{color:var(--muted)}
+.loading-row td{text-align:center;padding:36px;color:var(--dim)}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pagi{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:12px 18px;border-top:1px solid var(--border)}
+.pg-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;transition:all .2s}
+.pg-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.pg-btn:disabled{opacity:.3;cursor:default}
+.pg-btn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.pg-info{font-size:10px;color:var(--dim);margin:0 6px}
+@keyframes rowFlash{0%{background:rgba(0,229,255,.14)}100%{background:transparent}}
+.rf{animation:rowFlash .7s ease-out}
+.footer{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--dim);letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div class="logo">{{ currentExchangeName }} <span class="ex">Market</span> Monitor</div>
+    <div class="hdr-right">
+      <div class="status-badge" :class="dbStatus">{{ dbStatusText }}</div>
+      <div class="live"><div class="dot" :class="{err:dbStatus==='err'}"></div>LIVE · {{ currentTime }}</div>
+    </div>
+  </div>
+
+  <div class="ctrl">
+    <span class="ctrl-lbl">⚡ 交易所</span>
+    <div class="sel-wrap">
+      <select v-model="currentExchange" @change="onExchangeChange" class="exchange-sel">
+        <option v-for="e in exchanges" :key="e.id" :value="e.id">{{ e.name }}</option>
+      </select>
+    </div>
+
+    <span class="ctrl-lbl">幣種</span>
+    <div class="sel-wrap">
+      <select v-model="selectedSymbol" @change="fetchData">
+        <option value="ALL">全部幣種</option>
+        <option v-for="s in symbols" :key="s" :value="s">{{ s }}</option>
+      </select>
+    </div>
+
+    <span class="ctrl-lbl">查詢範圍</span>
+    <div class="tgl">
+      <button v-for="m in fetchMinutes" :key="m.v" class="tgl-btn" :class="{on:fetchMin===m.v}" @click="fetchMin=m.v;fetchData()">{{ m.l }}</button>
+    </div>
+
+    <span class="ctrl-lbl">搜尋</span>
+    <input class="srch" v-model="searchText" placeholder="幣種 / 時間..."/>
+
+    <div class="tgl">
+      <button class="tgl-btn" :class="{on:pageSize===10}" @click="pageSize=10">10</button>
+      <button class="tgl-btn" :class="{on:pageSize===25}" @click="pageSize=25">25</button>
+      <button class="tgl-btn" :class="{on:pageSize===50}" @click="pageSize=50">50</button>
+    </div>
+
+    <div class="tgl">
+      <button class="tgl-btn" :class="{on:autoRefresh}" @click="toggleAuto">{{ autoRefresh ? '⏸ 暫停' : '▶ 自動更新' }}</button>
+    </div>
+
+    <div class="tgl">
+      <button class="tgl-btn" @click="fetchData" style="color:var(--accent)">⟳ 立即更新</button>
+    </div>
+  </div>
+
+  <div class="cards" v-if="latestRow">
+    <div class="card cs"><div class="c-lbl">Spot Best Bid</div><div class="c-val cyan">{{ fmt(latestRow.Spot_bids) }}</div><div class="c-sub">{{ latestRow.Symbol }}</div></div>
+    <div class="card cs"><div class="c-lbl">Spot Best Ask</div><div class="c-val ora">{{ fmt(latestRow.Spot_asks) }}</div><div class="c-sub">{{ latestRow.Symbol }}</div></div>
+    <div class="card cc"><div class="c-lbl">Contract Best Bid</div><div class="c-val cyan">{{ fmt(latestRow.Contract_bids) }}</div><div class="c-sub">{{ latestRow.Symbol }}</div></div>
+    <div class="card cc"><div class="c-lbl">Contract Best Ask</div><div class="c-val ora">{{ fmt(latestRow.Contract_asks) }}</div><div class="c-sub">{{ latestRow.Symbol }}</div></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="tbl-hdr">
+      <div class="tbl-title">Market Data · dbo.{{ currentTableName }}</div>
+      <div class="row-ct">{{ filteredRows.length }} 筆 / 共 {{ tableData.length }} 筆</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th @click="sortBy('Time')"               :class="{sorted:sortKey==='Time'}">Time {{ si('Time') }}</th>
+          <th @click="sortBy('Symbol')"             :class="{sorted:sortKey==='Symbol'}">Symbol {{ si('Symbol') }}</th>
+          <th @click="sortBy('Spot_bids')"          :class="{sorted:sortKey==='Spot_bids'}">Spot Bid {{ si('Spot_bids') }}</th>
+          <th @click="sortBy('Spot_asks')"          :class="{sorted:sortKey==='Spot_asks'}">Spot Ask {{ si('Spot_asks') }}</th>
+          <th @click="sortBy('Contract_bids')"      :class="{sorted:sortKey==='Contract_bids'}">Contract Bid {{ si('Contract_bids') }}</th>
+          <th @click="sortBy('Contract_asks')"      :class="{sorted:sortKey==='Contract_asks'}">Contract Ask {{ si('Contract_asks') }}</th>
+          <th @click="sortBy('Open_position_Gap')"  :class="{sorted:sortKey==='Open_position_Gap'}">Open Gap % {{ si('Open_position_Gap') }}</th>
+          <th @click="sortBy('Close_position_Gap')" :class="{sorted:sortKey==='Close_position_Gap'}">Close Gap % {{ si('Close_position_Gap') }}</th>
+          <th @click="sortBy('Open_position_Gap2nd')"  :class="{sorted:sortKey==='Open_position_Gap2nd'}">Open Gap2 % {{ si('Open_position_Gap2nd') }}</th>
+          <th @click="sortBy('Close_position_Gap2nd')" :class="{sorted:sortKey==='Close_position_Gap2nd'}">Close Gap2 % {{ si('Close_position_Gap2nd') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-if="isLoading" class="loading-row"><td colspan="10"><span class="spinner"></span>載入資料中...</td></tr>
+        <template v-else>
+          <tr v-for="row in pagedRows" :key="row._uid" :class="{rf:row._new}">
+            <td class="t-dim">{{ row.Time }}</td>
+            <td><span class="sym-badge"><span class="sdot"></span>{{ row.Symbol }}</span></td>
+            <td class="pbid">{{ fmt(row.Spot_bids) }}</td>
+            <td class="pask">{{ fmt(row.Spot_asks) }}</td>
+            <td class="pbid">{{ fmt(row.Contract_bids) }}</td>
+            <td class="pask">{{ fmt(row.Contract_asks) }}</td>
+            <td class="gap-cell" :class="gapClass(row.Open_position_Gap)">{{ fmtGap(row.Open_position_Gap) }}</td>
+            <td class="gap-cell" :class="gapClass(row.Close_position_Gap)">{{ fmtGap(row.Close_position_Gap) }}</td>
+            <td class="gap-cell" :class="gapClass(row.Open_position_Gap2nd)">{{ fmtGap(row.Open_position_Gap2nd) }}</td>
+            <td class="gap-cell" :class="gapClass(row.Close_position_Gap2nd)">{{ fmtGap(row.Close_position_Gap2nd) }}</td>
+          </tr>
+          <tr v-if="!pagedRows.length"><td colspan="10" style="text-align:center;padding:36px;color:var(--dim)">— 無符合資料 —</td></tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="pagi">
+      <span class="pg-info">第 {{ currentPage }} / {{ totalPages }} 頁</span>
+      <button class="pg-btn" @click="currentPage=1"          :disabled="currentPage===1">«</button>
+      <button class="pg-btn" @click="currentPage--"          :disabled="currentPage===1">‹</button>
+      <button v-for="p in visiblePages" :key="p" class="pg-btn" :class="{on:p===currentPage}" @click="currentPage=p">{{ p }}</button>
+      <button class="pg-btn" @click="currentPage++"          :disabled="currentPage===totalPages">›</button>
+      <button class="pg-btn" @click="currentPage=totalPages" :disabled="currentPage===totalPages">»</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>DATABASE: Crypto · TABLE: dbo.{{ currentTableName }} · API: FastAPI</span>
+    <span>最後更新：{{ lastFetch }}</span>
+  </div>
+</div>
+
+<script>
+const{createApp,ref,computed,watch,onMounted,onUnmounted}=Vue;
+const FETCH_MINUTES=[{l:'1分',v:1},{l:'5分',v:5},{l:'15分',v:15},{l:'30分',v:30},{l:'1小時',v:60}];
+let _uid=0;
+
+createApp({
+  setup(){
+    const exchanges=ref([]);
+    const currentExchange=ref('bybit');
+    const symbols=ref([]),selectedSymbol=ref('ALL'),searchText=ref(''),sortKey=ref('Time'),sortDir=ref(-1);
+    const pageSize=ref(25),currentPage=ref(1),autoRefresh=ref(true),currentTime=ref(''),lastFetch=ref('—');
+    const tableData=ref([]),isLoading=ref(false),dbStatus=ref('loading'),fetchMin=ref(5);
+    const fetchMinutes=ref(FETCH_MINUTES);
+    let timer=null;
+
+    const currentExchangeInfo=computed(()=>exchanges.value.find(e=>e.id===currentExchange.value)||{});
+    const currentExchangeName=computed(()=>currentExchangeInfo.value.name||'');
+    const currentTableName=computed(()=>currentExchangeInfo.value.db_table||'');
+
+    function tick(){currentTime.value=new Date().toLocaleTimeString('zh-TW');}
+    tick();
+
+    async function fetchExchanges(){
+      try{
+        const r=await fetch('/api/exchanges');
+        const j=await r.json();
+        if(j.success){
+          exchanges.value=j.exchanges;
+          if(exchanges.value.length>0 && !currentExchange.value){
+            currentExchange.value=exchanges.value[0].id;
+          }
+        }
+      }catch(e){console.warn('fetchExchanges error',e);}
+    }
+
+    async function fetchSymbols(){
+      try{
+        const r=await fetch(`/api/symbols?exchange=${currentExchange.value}`);
+        const j=await r.json();
+        if(j.success)symbols.value=j.symbols;
+      }catch(e){console.warn('fetchSymbols error',e);}
+    }
+
+    async function fetchData(){
+      isLoading.value=true;
+      try{
+        const sym=selectedSymbol.value==='ALL'?'':selectedSymbol.value;
+        const url=`/api/data?exchange=${currentExchange.value}&minutes=${fetchMin.value}&limit=1000${sym?'&symbol='+sym:''}`;
+        const r=await fetch(url);
+        const j=await r.json();
+        if(j.success){
+          const prev=new Set(tableData.value.map(r=>r.Time+'|'+r.Symbol));
+          tableData.value=j.data.map(r=>({...r,_uid:++_uid,_new:!prev.has(r.Time+'|'+r.Symbol)}));
+          setTimeout(()=>{tableData.value.forEach(r=>r._new=false);},800);
+          dbStatus.value='ok';lastFetch.value=new Date().toLocaleTimeString('zh-TW');
+        }else{dbStatus.value='err';}
+      }catch(e){dbStatus.value='err';console.error(e);}
+      finally{isLoading.value=false;tick();}
+    }
+
+    async function onExchangeChange(){
+      tableData.value=[];
+      await fetchSymbols();
+      selectedSymbol.value='ALL';
+      await fetchData();
+    }
+
+    function toggleAuto(){autoRefresh.value=!autoRefresh.value;autoRefresh.value?startTimer():stopTimer();}
+    function startTimer(){timer=setInterval(fetchData,2000);}
+    function stopTimer(){clearInterval(timer);timer=null;}
+
+    onMounted(async()=>{
+      await fetchExchanges();
+      await fetchSymbols();
+      await fetchData();
+      startTimer();
+    });
+    onUnmounted(()=>stopTimer());
+
+    watch([selectedSymbol,pageSize,searchText],()=>{currentPage.value=1;});
+
+    const dbStatusText=computed(()=>dbStatus.value==='ok'?'✓ DB 已連線':dbStatus.value==='err'?'✗ DB 連線失敗':'⟳ 連線中...');
+
+    const filteredRows=computed(()=>{
+      let rows=tableData.value;
+      if(searchText.value.trim()){
+        const q=searchText.value.trim().toLowerCase();
+        rows=rows.filter(r=>(r.Symbol||'').toLowerCase().includes(q)||(r.Time||'').includes(q));
+      }
+      return[...rows].sort((a,b)=>{
+        const av=a[sortKey.value],bv=b[sortKey.value];
+        if(av==null&&bv==null)return 0;
+        if(av==null)return 1;if(bv==null)return -1;
+        return av<bv?-sortDir.value:av>bv?sortDir.value:0;
+      });
+    });
+
+    const totalPages=computed(()=>Math.max(1,Math.ceil(filteredRows.value.length/pageSize.value)));
+    const pagedRows=computed(()=>{const s=(currentPage.value-1)*pageSize.value;return filteredRows.value.slice(s,s+pageSize.value);});
+    const visiblePages=computed(()=>{const tp=totalPages.value,cp=currentPage.value,p=[];for(let i=Math.max(1,cp-2);i<=Math.min(tp,cp+2);i++)p.push(i);return p;});
+    const latestRow=computed(()=>{
+      const sym=selectedSymbol.value==='ALL'?null:selectedSymbol.value;
+      const rows=sym?tableData.value.filter(r=>r.Symbol===sym):tableData.value;
+      return rows.find(r=>r.Open_position_Gap!=null)||rows[0]||null;
+    });
+
+    function sortBy(k){if(sortKey.value===k)sortDir.value*=-1;else{sortKey.value=k;sortDir.value=-1;}currentPage.value=1;}
+    function si(k){return sortKey.value!==k?'↕':sortDir.value===-1?'↓':'↑';}
+    function fmt(v){if(v==null)return'—';const n=parseFloat(v);if(n>=1000)return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});if(n>=1)return n.toFixed(4);return n.toFixed(6);}
+    function fmtGap(v){if(v==null)return'—';const n=parseFloat(v);return(n>=0?'+':'')+n.toFixed(4)+'%';}
+    function gapClass(v){if(v==null)return'nd';const n=parseFloat(v);return n>0?'gp':n<0?'gn':'gz';}
+
+    return{exchanges,currentExchange,currentExchangeName,currentTableName,symbols,selectedSymbol,searchText,sortKey,sortDir,pageSize,currentPage,autoRefresh,currentTime,lastFetch,tableData,isLoading,dbStatus,dbStatusText,fetchMin,filteredRows,pagedRows,totalPages,visiblePages,latestRow,fetchMinutes,fetchData,onExchangeChange,toggleAuto,sortBy,si,fmt,fmtGap,gapClass};
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
