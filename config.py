@@ -1,12 +1,12 @@
-# config.py
+﻿# config.py
 import os
 
 # ==============================
-# 交易所設定
+# 鈭斗??閮剖?
 # ==============================
 EXCHANGE = os.getenv("EXCHANGE", "bybit").lower()  # bybit, binance, okx...
 
-# 各交易所設定
+# ?漱??閮剖?
 EXCHANGE_CONFIG = {
     "bybit": {
         "name": "Bybit",
@@ -15,7 +15,7 @@ EXCHANGE_CONFIG = {
         "sp_name": "merge_market_data_bybit",
         "ws_spot_url": "wss://stream.bybit.com/v5/public/spot",
         "ws_contract_url": "wss://stream.bybit.com/v5/public/linear",
-        "orderbook_topic_template": "orderbook.50.{symbol}",  # {symbol} 會被替換成 BTCUSDT
+        "orderbook_topic_template": "orderbook.50.{symbol}",  # {symbol} ?◤?踵???BTCUSDT
     },
     "binance": {
         "name": "Binance",
@@ -37,14 +37,14 @@ EXCHANGE_CONFIG = {
     },
 }
 
-# 當前交易所配置
+# ?嗅?鈭斗???蔭
 if EXCHANGE not in EXCHANGE_CONFIG:
-    raise ValueError(f"不支援的交易所: {EXCHANGE}，支援清單: {list(EXCHANGE_CONFIG.keys())}")
+    raise ValueError(f"銝?渡?鈭斗??: {EXCHANGE}嚗?湔??? {list(EXCHANGE_CONFIG.keys())}")
 
 CURRENT_EXCHANGE = EXCHANGE_CONFIG[EXCHANGE]
 
 # ==============================
-# 幣種清單
+# 撟?車皜
 # ==============================
 SYMBOLS = [
     "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
@@ -53,21 +53,22 @@ SYMBOLS = [
 ]
 
 # ==============================
-# MSSQL 連線設定
+# MSSQL ???閮剖?
 # ==============================
-MSSQL_SERVER   = os.getenv("MSSQL_SERVER",   "host.docker.internal")
+MSSQL_SERVER   = os.getenv("MSSQL_SERVER",   "172.26.0.1,1433")
 MSSQL_DATABASE = os.getenv("MSSQL_DATABASE", "Crypto")
 MSSQL_USER     = os.getenv("MSSQL_USER",     "sa")
 MSSQL_PASSWORD = os.getenv("MSSQL_PASSWORD", "1qaz2WSX")
 
 # ==============================
-# Telegram 告警設定
+# Telegram ?郎閮剖?
 # ==============================
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN",   "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ==============================
-# 其他設定
+# ?嗡?閮剖?
 # ==============================
 HEARTBEAT_PORT = int(os.getenv("HEARTBEAT_PORT", "9000"))
 LOG_DIR        = "/app/logs"
+

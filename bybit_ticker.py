@@ -1,4 +1,4 @@
-# bybit_ticker.py (原 main.py)
+﻿# bybit_ticker.py
 import websocket
 import json
 import threading
@@ -19,197 +19,136 @@ from config import (
 )
 
 # ==============================
-# 設定 Logger（使用 RotatingFileHandler）
+# Logger 設定
 # ==============================
 os.makedirs(LOG_DIR, exist_ok=True)
 log_file = f"{LOG_DIR}/{EXCHANGE}_ticker.log"
 
-# 建立 RotatingFileHandler
 file_handler = RotatingFileHandler(
     log_file,
-    maxBytes=10*1024*1024,  # 10MB
-    backupCount=5,           # 保留 5 個備份
+    maxBytes=10*1024*1024,
+    backupCount=5,
     encoding='utf-8'
 )
 file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-))
+file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
 
-# Console handler
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
-console_handler.setFormatter(logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-))
+console_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
 
-# 設定 root logger
-logging.basicConfig(
-    level=logging.INFO,
-    handlers=[file_handler, console_handler]
-)
-
+logging.basicConfig(level=logging.INFO, handlers=[file_handler, console_handler])
 log = logging.getLogger(__name__)
 
-log.info(f"🚀 {CURRENT_EXCHANGE['display_name']} Ticker 啟動")
-log.info(f"📊 交易所: {EXCHANGE}")
-log.info(f"📋 DB TABLE: {CURRENT_EXCHANGE['db_table']}")
-log.info(f"📦 SP: {CURRENT_EXCHANGE['sp_name']}")
-log.info(f"💾 Log 檔案: {log_file} (最多 10MB × 6 個)")
-
 # ==============================
-# 全域最新價格
+# 資料快取與佇列
 # ==============================
 latest_prices = {
     symbol: {
-        "Spot_bids": None,
-        "Spot_asks": None,
-        "Contract_bids": None,
-        "Contract_asks": None
+        "Spot_bids": None, "Spot_asks": None,
+        "Contract_bids": None, "Contract_asks": None
     }
     for symbol in SYMBOLS
 }
-
 data_queue = queue.Queue()
 
-# ==============================
-# Telegram 告警
-# ==============================
 def send_telegram(msg: str):
-    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        return
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": msg}, timeout=10)
-        log.info(f"📨 Telegram 告警已送出：{msg}")
     except Exception as e:
-        log.warning(f"Telegram 送出失敗：{e}")
+        log.warning(f"Telegram send failed: {e}")
 
-# ==============================
-# TCP 心跳 Server
-# ==============================
 def heartbeat_server():
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind(("0.0.0.0", HEARTBEAT_PORT))
     srv.listen(5)
-    log.info(f"💓 TCP 心跳 Server 啟動：port {HEARTBEAT_PORT}")
+    log.info(f"TCP heartbeat server started on port {HEARTBEAT_PORT}")
     while True:
         try:
             conn, addr = srv.accept()
             conn.close()
-        except Exception:
-            pass
+        except Exception: pass
+
+def start_heartbeat(ws):
+    def run():
+        while getattr(ws, 'sock', None) and ws.sock.connected:
+            try:
+                ws.send(json.dumps({"op": "ping"}))
+                time.sleep(20)
+            except: break
+    threading.Thread(target=run, daemon=True).start()
 
 # ==============================
-# Spot WebSocket（支援 Bybit）
+# Spot WebSocket
 # ==============================
 def on_open_spot(ws):
-    # Bybit 訂閱格式
+    start_heartbeat(ws)
     if EXCHANGE == "bybit":
         args = [CURRENT_EXCHANGE["orderbook_topic_template"].format(symbol=s) for s in SYMBOLS]
         ws.send(json.dumps({"op": "subscribe", "args": args}))
-    log.info("🟢 Spot 訂閱成功")
+    log.info("Spot WebSocket opened & subscribed")
 
 def on_message_spot(ws, message):
     msg = json.loads(message)
-    
-    # Bybit ping/pong
-    if EXCHANGE == "bybit":
-        if msg.get("op") == "ping":
-            ws.send(json.dumps({"op": "pong"}))
-            return
-        
-        if "topic" in msg and "orderbook" in msg["topic"]:
-            symbol = msg["topic"].split(".")[-1]
-            if symbol not in latest_prices:
-                return
+    if msg.get("ret_msg") == "pong" or msg.get("op") == "pong": return
+    if "topic" in msg and "orderbook" in msg["topic"]:
+        symbol = msg["topic"].split(".")[-1]
+        if symbol in latest_prices:
             data = msg["data"]
-            bids = data.get("b", [])
-            asks = data.get("a", [])
-            if bids:
-                latest_prices[symbol]["Spot_bids"] = float(bids[0][0])
-            if asks:
-                latest_prices[symbol]["Spot_asks"] = float(asks[0][0])
-
-def on_error_spot(ws, error):
-    log.error(f"❌ Spot WebSocket 錯誤：{error}")
-
-def on_close_spot(ws, code, msg):
-    log.warning(f"⚠️ Spot WebSocket 斷線 (code={code})，5秒後重連...")
-    send_telegram(f"⚠️ {CURRENT_EXCHANGE['name']} Spot WebSocket 斷線，正在重連...")
+            b = data.get("b", []); a = data.get("a", [])
+            if b: latest_prices[symbol]["Spot_bids"] = float(b[0][0])
+            if a: latest_prices[symbol]["Spot_asks"] = float(a[0][0])
 
 def spot_ws():
     while True:
         try:
             ws = websocket.WebSocketApp(
                 CURRENT_EXCHANGE["ws_spot_url"],
-                on_open=on_open_spot,
-                on_message=on_message_spot,
-                on_error=on_error_spot,
-                on_close=on_close_spot
+                on_open=on_open_spot, on_message=on_message_spot,
+                on_error=lambda ws, e: log.error(f"Spot WS Error: {e}"),
+                on_close=lambda ws, c, m: log.warning(f"Spot WS Closed: {c} {m}")
             )
-            ws.run_forever(ping_interval=30, ping_timeout=10)
-        except Exception as e:
-            log.error(f"Spot WS 例外：{e}")
+            ws.run_forever()
+        except Exception as e: log.error(f"Spot WS Exception: {e}")
         time.sleep(5)
 
 # ==============================
-# Contract WebSocket（支援 Bybit）
+# Contract WebSocket
 # ==============================
 def on_open_contract(ws):
+    start_heartbeat(ws)
     if EXCHANGE == "bybit":
         args = [CURRENT_EXCHANGE["orderbook_topic_template"].format(symbol=s) for s in SYMBOLS]
         ws.send(json.dumps({"op": "subscribe", "args": args}))
-    log.info("🟢 Contract 訂閱成功")
+    log.info("Contract WebSocket opened & subscribed")
 
 def on_message_contract(ws, message):
     msg = json.loads(message)
-    
-    if EXCHANGE == "bybit":
-        if msg.get("op") == "ping":
-            ws.send(json.dumps({"op": "pong"}))
-            return
-        
-        if "topic" in msg and "orderbook" in msg["topic"]:
-            symbol = msg["topic"].split(".")[-1]
-            if symbol not in latest_prices:
-                return
+    if msg.get("ret_msg") == "pong" or msg.get("op") == "pong": return
+    if "topic" in msg and "orderbook" in msg["topic"]:
+        symbol = msg["topic"].split(".")[-1]
+        if symbol in latest_prices:
             data = msg["data"]
-            bids = data.get("b", [])
-            asks = data.get("a", [])
-            if bids:
-                latest_prices[symbol]["Contract_bids"] = float(bids[0][0])
-            if asks:
-                latest_prices[symbol]["Contract_asks"] = float(asks[0][0])
-
-def on_error_contract(ws, error):
-    log.error(f"❌ Contract WebSocket 錯誤：{error}")
-
-def on_close_contract(ws, code, msg):
-    log.warning(f"⚠️ Contract WebSocket 斷線 (code={code})，5秒後重連...")
-    send_telegram(f"⚠️ {CURRENT_EXCHANGE['name']} Contract WebSocket 斷線，正在重連...")
+            b = data.get("b", []); a = data.get("a", [])
+            if b: latest_prices[symbol]["Contract_bids"] = float(b[0][0])
+            if a: latest_prices[symbol]["Contract_asks"] = float(a[0][0])
 
 def contract_ws():
     while True:
         try:
             ws = websocket.WebSocketApp(
                 CURRENT_EXCHANGE["ws_contract_url"],
-                on_open=on_open_contract,
-                on_message=on_message_contract,
-                on_error=on_error_contract,
-                on_close=on_close_contract
+                on_open=on_open_contract, on_message=on_message_contract,
+                on_error=lambda ws, e: log.error(f"Contract WS Error: {e}"),
+                on_close=lambda ws, c, m: log.warning(f"Contract WS Closed: {c} {m}")
             )
-            ws.run_forever(ping_interval=30, ping_timeout=10)
-        except Exception as e:
-            log.error(f"Contract WS 例外：{e}")
+            ws.run_forever()
+        except Exception as e: log.error(f"Contract WS Exception: {e}")
         time.sleep(5)
 
-# ==============================
-# Snapshot 每秒推入 queue
-# ==============================
 def snapshot_loop():
     while True:
         now = datetime.now()
@@ -217,105 +156,38 @@ def snapshot_loop():
         rows = []
         for symbol, prices in latest_prices.items():
             if all(v is not None for v in prices.values()):
-                rows.append({
-                    "Time": Time,
-                    "symbol": symbol,
-                    "Spot_bids":     prices["Spot_bids"],
-                    "Spot_asks":     prices["Spot_asks"],
-                    "Contract_bids": prices["Contract_bids"],
-                    "Contract_asks": prices["Contract_asks"]
-                })
-            else:
-                log.debug(f"⚠️ {symbol} 資料尚未就緒，略過")
-
+                rows.append({"Time": Time, "symbol": symbol, **prices})
         if rows:
-            df = pd.DataFrame(rows)
-            data_queue.put(df)
-            log.info(f"📦 Snapshot 推入 queue：{len(rows)} 個幣種")
-
+            data_queue.put(pd.DataFrame(rows))
+            log.info(f"Snapshot queued: {len(rows)} symbols")
         time.sleep(1)
 
-# ==============================
-# MSSQL 上傳
-# ==============================
-def get_conn():
-    return pyodbc.connect(
-        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
-        f"SERVER={MSSQL_SERVER};"
-        f"DATABASE={MSSQL_DATABASE};"
-        f"UID={MSSQL_USER};"
-        f"PWD={MSSQL_PASSWORD};"
-        f"Encrypt=no;TrustServerCertificate=yes;",
-        autocommit=True
-    )
-
 def upload_sql():
-    conn   = None
-    cursor = None
-
+    conn = None
     while True:
         if conn is None:
             try:
-                conn   = get_conn()
+                conn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={MSSQL_SERVER};DATABASE={MSSQL_DATABASE};UID={MSSQL_USER};PWD={MSSQL_PASSWORD};Encrypt=no;TrustServerCertificate=yes;LoginTimeout=30;", autocommit=True)
                 cursor = conn.cursor()
-                log.info("✅ MSSQL 已連線")
-                send_telegram(f"✅ {CURRENT_EXCHANGE['display_name']}：MSSQL 連線成功，服務啟動")
+                log.info("MSSQL connected")
             except Exception as e:
-                log.error(f"MSSQL 連線失敗：{e}，10秒後重試...")
-                send_telegram(f"❌ {CURRENT_EXCHANGE['name']} MSSQL 連線失敗：{e}")
-                time.sleep(10)
-                continue
-
+                log.error(f"MSSQL connect failed: {e}"); time.sleep(10); continue
         try:
             df = data_queue.get(timeout=5)
-
             for _, row in df.iterrows():
-                sp_call = f"""
-                    EXEC {CURRENT_EXCHANGE['sp_name']}
-                        @p_time = ?,
-                        @p_symbol = ?,
-                        @p_Spot_bids = ?,
-                        @p_Spot_asks = ?,
-                        @p_Contract_bids = ?,
-                        @p_Contract_asks = ?
-                """
-                cursor.execute(sp_call, (
-                    row['Time'],
-                    row['symbol'],
-                    row['Spot_bids'],
-                    row['Spot_asks'],
-                    row['Contract_bids'],
-                    row['Contract_asks']
-                ))
-
-            log.info(f"📤 已寫入 MSSQL：{len(df)} 筆")
-
-        except queue.Empty:
-            pass
+                cursor.execute(f"EXEC {CURRENT_EXCHANGE['sp_name']} ?, ?, ?, ?, ?, ?", (row['Time'], row['symbol'], row['Spot_bids'], row['Spot_asks'], row['Contract_bids'], row['Contract_asks']))
+            log.info(f"Written to MSSQL: {len(df)} rows")
+        except queue.Empty: pass
         except Exception as e:
-            log.error(f"MSSQL 寫入失敗：{e}，嘗試重連...")
-            send_telegram(f"❌ {CURRENT_EXCHANGE['name']} MSSQL 寫入失敗：{e}")
-            try:
-                conn.close()
-            except Exception:
-                pass
-            conn   = None
-            cursor = None
-            time.sleep(5)
+            log.error(f"MSSQL write failed: {e}"); conn = None; time.sleep(5)
 
-# ==============================
-# 主程式
-# ==============================
 if __name__ == '__main__':
-    log.info(f"🚀 {CURRENT_EXCHANGE['display_name']} Ticker 啟動")
-    send_telegram(f"🚀 {CURRENT_EXCHANGE['display_name']} 容器已啟動")
-
+    log.info(f"{CURRENT_EXCHANGE['display_name']} ticker started")
     threading.Thread(target=heartbeat_server, daemon=True).start()
     threading.Thread(target=spot_ws,          daemon=True).start()
     threading.Thread(target=contract_ws,      daemon=True).start()
     threading.Thread(target=snapshot_loop,    daemon=True).start()
     threading.Thread(target=upload_sql,       daemon=True).start()
-
     while True:
-        log.info("💓 主程式心跳正常")
+        log.info("Main heartbeat OK")
         time.sleep(60)
