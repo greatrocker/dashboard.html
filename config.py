@@ -24,7 +24,7 @@ EXCHANGE_CONFIG = {
         "sp_name": "merge_market_data_binance",
         "ws_spot_url": "wss://stream.binance.com:9443/ws",
         "ws_contract_url": "wss://fstream.binance.com/ws",
-        "orderbook_topic_template": "{symbol_lower}@depth",  # btcusdt@depth
+        "orderbook_topic_template": "{symbol_lower}@bookTicker",  # btcusdt@bookTicker
     },
     "okx": {
         "name": "OKX",
@@ -33,7 +33,7 @@ EXCHANGE_CONFIG = {
         "sp_name": "merge_market_data_okx",
         "ws_spot_url": "wss://ws.okx.com:8443/ws/v5/public",
         "ws_contract_url": "wss://ws.okx.com:8443/ws/v5/public",
-        "orderbook_topic_template": "books:{symbol}",  # books:BTC-USDT
+        "orderbook_topic_template": "books5:{symbol}",  # books5:BTC-USDT
     },
 }
 
@@ -51,6 +51,9 @@ SYMBOLS = [
     "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT",
     "SUIUSDT", "TONUSDT", "TRXUSDT", "NEARUSDT", "APTUSDT"
 ]
+# SYMBOLS = [
+#     "BTCUSDT", "ETHUSDT"
+# ]
 
 # ==============================
 # MSSQL ???閮剖?
@@ -71,4 +74,3 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 # ==============================
 HEARTBEAT_PORT = int(os.getenv("HEARTBEAT_PORT", "9000"))
 LOG_DIR        = "/app/logs"
-

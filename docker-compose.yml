@@ -1,14 +1,13 @@
+﻿services:
 
-services:
-
-  # ==============================
-  # API Server：提供 Dashboard + REST API
-  # ==============================
   exchange-api:
     build: .
     container_name: exchange-monitor-api
     restart: unless-stopped
     command: uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     logging:
       driver: "json-file"
       options:
@@ -25,15 +24,21 @@ services:
     volumes:
       - ./static:/app/static
       - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./api_server.py:/app/api_server.py
+      - ./exchange_api_common.py:/app/exchange_api_common.py
+      - ./bybit_api.py:/app/bybit_api.py
+      - ./binance_api.py:/app/binance_api.py
+      - ./okx_api.py:/app/okx_api.py
 
-  # ==============================
-  # Bybit Ticker（獨立容器）
-  # ==============================
   bybit-ticker:
     build: .
     container_name: bybit-ticker
     restart: unless-stopped
     command: python -u bybit_ticker.py
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     logging:
       driver: "json-file"
       options:
@@ -53,14 +58,76 @@ services:
       - "9000:9000"
     volumes:
       - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./bybit_ticker.py:/app/bybit_ticker.py
 
-  # ==============================
-  # Uptime Kuma
-  # ==============================
+  binance-ticker:
+    build: .
+    container_name: binance-ticker
+    restart: unless-stopped
+    command: python -u binance_ticker.py
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - TZ=Asia/Taipei
+      - EXCHANGE=binance
+      - MSSQL_SERVER=${MSSQL_SERVER}
+      - MSSQL_DATABASE=${MSSQL_DATABASE}
+      - MSSQL_USER=${MSSQL_USER}
+      - MSSQL_PASSWORD=${MSSQL_PASSWORD}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - HEARTBEAT_PORT=9001
+    ports:
+      - "9001:9001"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./binance_ticker.py:/app/binance_ticker.py
+
+  okx-ticker:
+    build: .
+    container_name: okx-ticker
+    restart: unless-stopped
+    command: python -u okx_ticker.py
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - TZ=Asia/Taipei
+      - EXCHANGE=okx
+      - MSSQL_SERVER=${MSSQL_SERVER}
+      - MSSQL_DATABASE=${MSSQL_DATABASE}
+      - MSSQL_USER=${MSSQL_USER}
+      - MSSQL_PASSWORD=${MSSQL_PASSWORD}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - HEARTBEAT_PORT=9002
+    ports:
+      - "9002:9002"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./okx_ticker.py:/app/okx_ticker.py
+
   uptime-kuma:
     image: louislam/uptime-kuma:1
     container_name: uptime-kuma
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     logging:
       driver: "json-file"
       options:

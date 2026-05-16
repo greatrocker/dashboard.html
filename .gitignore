@@ -6,3 +6,4 @@ __pycache__/
 *.ps1
 *.sqlite3
 static/*.Identifier
+*:Zone.Identifier
