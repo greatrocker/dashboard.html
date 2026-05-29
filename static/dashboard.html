@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8"/>
-<title>Multi-Exchange Monitor</title>
+<title>Multi-Exchange Monitor PRO</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
@@ -22,69 +22,55 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .status-badge{display:inline-flex;align-items:center;gap:6px;border-radius:3px;padding:4px 10px;font-size:10px;letter-spacing:1px;text-transform:uppercase}
 .status-badge.ok{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--pos)}
 .status-badge.err{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);color:var(--neg)}
-.ctrl{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
-.ctrl-lbl{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+
+.ctrl-panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.ctrl-group{display:flex;flex-direction:column;gap:8px}
+.ctrl-lbl{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;font-weight:bold}
 .sel-wrap{position:relative}
-.sel-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--accent);pointer-events:none;font-size:11px}
-select{appearance:none;background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 32px 8px 12px;border-radius:4px;cursor:pointer;transition:border-color .2s;min-width:150px}
+select{appearance:none;background:rgba(8,12,20,0.6);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 32px 8px 12px;border-radius:4px;cursor:pointer;transition:border-color .2s;min-width:150px}
 select:hover,select:focus{border-color:var(--accent);outline:none}
-select option{background:var(--panel)}
-.exchange-sel{min-width:180px;font-weight:bold;border-color:var(--accent)}
-.srch{background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 12px;border-radius:4px;transition:border-color .2s;width:180px}
-.srch::placeholder{color:var(--dim)}
-.srch:hover,.srch:focus{border-color:var(--accent);outline:none}
-.tgl{display:flex;background:var(--panel);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.tgl{display:flex;background:rgba(8,12,20,0.6);border:1px solid var(--border);border-radius:4px;overflow:hidden}
 .tgl-btn{padding:8px 14px;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--dim);background:transparent;border:none;cursor:pointer;transition:all .2s;text-transform:uppercase}
 .tgl-btn.on{background:var(--accent);color:var(--bg);font-weight:bold}
-.tgl-btn:hover:not(.on){color:var(--text)}
-/* ── Chart ── */
-.chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:18px}
-.chart-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)}
-.chart-title{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
-.chart-head-left{display:flex;align-items:center;gap:12px}
-.chart-tabs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.chart-tab{background:transparent;border:1px solid transparent;border-radius:999px;color:var(--dim);cursor:pointer;font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;text-transform:uppercase;transition:all .2s}
-.chart-tab:hover{color:var(--text);border-color:rgba(0,229,255,.25)}
-.chart-tab.on{color:var(--accent);border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.08)}
-.chart-legend{display:flex;align-items:center;gap:16px}
+.srch{background:rgba(8,12,20,0.6);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 12px;border-radius:4px;width:180px}
+
+/* Multi-Exchange List */
+.multi-box{width:240px;border:1px solid var(--border);border-radius:4px;background:rgba(8,12,20,0.4);overflow:hidden}
+.multi-list{height:80px;overflow-y:auto;padding:4px}
+.multi-item{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;font-size:11px;border-bottom:1px solid rgba(26,37,64,0.3)}
+.multi-item:last-child{border-bottom:none}
+.btn-del{color:var(--neg);cursor:pointer;font-weight:bold;font-size:14px;padding:0 4px}
+.multi-add-row{display:flex;gap:4px;padding:6px;border-top:1px solid var(--border);background:rgba(26,37,64,0.2)}
+.btn-action{background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:10px;padding:4px 8px;border-radius:3px;cursor:pointer}
+.btn-action:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Charts Layout */
+.charts-grid{display:flex;flex-direction:column;gap:20px;margin-bottom:20px}
+.chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:transform 0.2s}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(0,229,255,0.02)}
+.chart-title{font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+.chart-legend{display:flex;align-items:center;gap:14px}
 .leg-item{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1px;color:var(--dim)}
-.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.leg-sym{font-size:10px;color:var(--accent);letter-spacing:1px;border-left:1px solid var(--border);padding-left:14px}
-.chart-body{padding:16px 18px;height:220px;position:relative}
-.chart-body canvas{width:100%!important;height:100%!important}
-/* ── Table ── */
-.tbl-wrap{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+.chart-body{padding:16px 18px;height:240px;position:relative}
+.chart-body.tall{height:320px}
+
+/* Table */
+.tbl-wrap{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .tbl-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border)}
 .tbl-title{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
-.row-ct{font-size:10px;color:var(--dim)}
 table{width:100%;border-collapse:collapse}
-thead th{padding:10px 14px;text-align:right;font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;transition:color .2s;white-space:nowrap}
-thead th:hover{color:var(--accent)}
+thead th{padding:12px 14px;text-align:right;font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);cursor:pointer}
 thead th:first-child,thead th:nth-child(2){text-align:left}
-thead th.sorted{color:var(--accent)}
-tbody tr{border-bottom:1px solid rgba(26,37,64,.5);transition:background .15s}
-tbody tr:hover{background:rgba(0,229,255,.04)}
-tbody tr:last-child{border-bottom:none}
-td{padding:11px 14px;font-size:12px;text-align:right;white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(26,37,64,0.4);transition:background .15s}
+tbody tr:hover{background:rgba(0,229,255,0.04)}
+td{padding:12px 14px;font-size:12px;text-align:right}
 td:first-child{text-align:left}td:nth-child(2){text-align:left}
-.t-dim{color:var(--dim);font-size:11px}
-.sym-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.18);border-radius:3px;padding:2px 7px;font-size:11px;font-weight:bold;color:var(--accent)}
-.sdot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 5px var(--accent)}
+.sym-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,255,0.07);border:1px solid rgba(0,229,255,0.18);border-radius:3px;padding:2px 7px;font-weight:bold;color:var(--accent)}
 .pbid{color:var(--pos)}.pask{color:var(--neg)}
-.gap-cell{font-weight:bold}
-.gp{color:var(--pos)}.gn{color:var(--neg)}.gz{color:var(--dim)}.nd{color:var(--dim)}
-.loading-row td{text-align:center;padding:36px;color:var(--dim)}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.pagi{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:12px 18px;border-top:1px solid var(--border)}
-.pg-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;transition:all .2s}
-.pg-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-.pg-btn:disabled{opacity:.3;cursor:default}
-.pg-btn.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
-.pg-info{font-size:10px;color:var(--dim);margin:0 6px}
-@keyframes rowFlash{0%{background:rgba(0,229,255,.14)}100%{background:transparent}}
-.rf{animation:rowFlash .7s ease-out}
-.footer{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--dim);letter-spacing:1px}
+.gap-cell{font-weight:bold}.gp{color:var(--pos)}.gn{color:var(--neg)}
+
+.footer{margin-top:20px;padding:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -93,364 +79,344 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
     <div class="logo">{{ currentExchangeName }} <span class="ex">Market</span> Monitor</div>
     <div class="hdr-right">
       <div class="status-badge" :class="dbStatus">{{ dbStatusText }}</div>
-      <div class="live"><div class="dot" :class="{err:dbStatus==='err'}"></div>LIVE · {{ currentTime }}</div>
+      <div class="live"><div class="dot" :class="{err:dbStatus==='err'}"></div>LIVE {{ currentTime }}</div>
     </div>
   </div>
 
-  <div class="ctrl">
-    <span class="ctrl-lbl">⚡ 交易所</span>
-    <div class="sel-wrap">
-      <select v-model="currentExchange" @change="onExchangeChange" class="exchange-sel">
-        <option v-for="e in exchanges" :key="e.id" :value="e.id">{{ e.name }}</option>
-      </select>
-    </div>
-    <span class="ctrl-lbl">幣種</span>
-    <div class="sel-wrap">
-      <select v-model="selectedSymbol" @change="fetchData">
-        <option value="ALL">全部幣種</option>
-        <option v-for="s in symbols" :key="s" :value="s">{{ s }}</option>
-      </select>
-    </div>
-    <span class="ctrl-lbl">查詢範圍</span>
-    <div class="tgl">
-      <button v-for="m in fetchMinutes" :key="m.v" class="tgl-btn" :class="{on:fetchMin===m.v}" @click="fetchMin=m.v;fetchData()">{{ m.l }}</button>
-    </div>
-    <span class="ctrl-lbl">搜尋</span>
-    <input class="srch" v-model="searchText" placeholder="幣種 / 時間..."/>
-    <div class="tgl">
-      <button class="tgl-btn" :class="{on:pageSize===10}" @click="pageSize=10">10</button>
-      <button class="tgl-btn" :class="{on:pageSize===25}" @click="pageSize=25">25</button>
-      <button class="tgl-btn" :class="{on:pageSize===50}" @click="pageSize=50">50</button>
-    </div>
-    <div class="tgl">
-      <button class="tgl-btn" :class="{on:autoRefresh}" @click="toggleAuto">{{ autoRefresh ? '⏸ 暫停' : '▶ 自動更新' }}</button>
-    </div>
-    <div class="tgl">
-      <button class="tgl-btn" @click="fetchData" style="color:var(--accent)">⟳ 立即更新</button>
-    </div>
-  </div>
-
-  <!-- Gap Trend Chart（取代原本的 cards） -->
-  <div class="chart-wrap" v-show="tableData.length">
-    <div class="chart-hdr">
-      <div class="chart-head-left">
-        <div class="chart-tabs">
-          <button class="chart-tab" :class="{on:chartMode==='gap'}" @click="setChartMode('gap')">Gap Trend</button>
-          <button class="chart-tab" :class="{on:chartMode==='price'}" @click="setChartMode('price')">價格趨勢圖</button>
+  <div class="ctrl-panel">
+    <!-- Single Exchange Settings -->
+    <div class="ctrl-group">
+      <span class="ctrl-lbl">單一交易所設定</span>
+      <div style="display:flex; gap:10px;">
+        <div class="sel-wrap">
+          <select v-model="currentExchange" @change="onExchangeChange">
+            <option v-for="e in exchanges" :key="e.id" :value="e.id">{{ e.name }}</option>
+          </select>
+        </div>
+        <div class="sel-wrap">
+          <select v-model="selectedSymbol" @change="fetchData">
+            <option value="ALL">所有幣種</option>
+            <option v-for="s in symbols" :key="s" :value="s">{{ s }}</option>
+          </select>
         </div>
       </div>
-      <div class="chart-legend">
-        <span v-for="item in activeChartLegend" :key="item.label" class="leg-item"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
-        <span class="leg-sym">{{ selectedSymbol==='ALL' ? 'ALL SYMBOLS' : selectedSymbol }}</span>
+    </div>
+
+    <!-- Multi-Exchange Sync Settings -->
+    <div class="ctrl-group">
+      <span class="ctrl-lbl">多交易所同步 (現貨賣價)</span>
+      <div style="display:flex; gap:12px;">
+        <div class="multi-box">
+          <div class="multi-list">
+            <div v-for="eid in multiExchanges" :key="eid" class="multi-item">
+              <span>{{ getExchangeName(eid) }}</span>
+              <span class="btn-del" @click="removeMultiExchange(eid)">×</span>
+            </div>
+            <div v-if="!multiExchanges.length" style="padding:20px; text-align:center; color:var(--dim); font-size:10px;">請添加交易所</div>
+          </div>
+          <div class="multi-add-row">
+            <select v-model="addExchangeId" style="min-width:100px; font-size:10px; padding:2px 4px; height:24px;">
+              <option value="" disabled>選擇...</option>
+              <option v-for="e in exchanges" :key="e.id" :value="e.id" :disabled="multiExchanges.includes(e.id)">{{ e.name }}</option>
+            </select>
+            <button class="btn-action" @click="addMultiExchange">ADD</button>
+            <button class="btn-action" @click="multiExchanges=[]">CLEAR</button>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <span class="ctrl-lbl">同步幣種</span>
+          <select v-model="multiSymbol" @change="fetchMultiData" style="min-width:120px;">
+            <option v-for="s in symbols" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </div>
       </div>
     </div>
-    <div class="chart-body">
-      <canvas ref="chartCanvas"></canvas>
+
+    <!-- Global Controls -->
+    <div class="ctrl-group">
+      <span class="ctrl-lbl">全局設定 / 搜尋</span>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div class="tgl">
+          <button v-for="m in fetchMinutes" :key="m.v" class="tgl-btn" :class="{on:fetchMin===m.v}" @click="fetchMin=m.v; fetchData(); fetchMultiData();">{{ m.l }}</button>
+        </div>
+        <input class="srch" v-model="searchText" placeholder="搜尋幣種..."/>
+        <button class="btn-action" @click="fetchData(); fetchMultiData();" style="color:var(--accent); font-weight:bold; padding:8px 12px;">手動更新</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <!-- Chart 1: Gap Trend (Single) -->
+    <div class="chart-wrap" v-show="tableData.length">
+      <div class="chart-hdr">
+        <div class="chart-title">Gap Trend Analysis ⚡ {{ currentExchangeName }} ⚡ {{ selectedSymbol }}</div>
+        <div class="chart-legend">
+          <span v-for="item in CHART_SERIES.gap" :key="item.label" class="leg-item"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas ref="chartGapCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 2: Price Trend (Single) -->
+    <div class="chart-wrap" v-show="tableData.length">
+      <div class="chart-hdr">
+        <div class="chart-title">Price Trend ⚡ {{ currentExchangeName }} ⚡ {{ selectedSymbol }}</div>
+        <div class="chart-legend">
+          <span v-for="item in CHART_SERIES.price" :key="item.label" class="leg-item"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas ref="chartPriceCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 3: Multi-Exchange Price Sync (Multi) -->
+    <div class="chart-wrap" v-show="multiExchanges.length">
+      <div class="chart-hdr">
+        <div class="chart-title">Multi-Exchange Price Sync (Spot Asks) 🌐 {{ multiSymbol }}</div>
+        <div class="chart-legend">
+          <span v-for="eid in multiExchanges" :key="eid" class="leg-item"><span class="leg-dot" :style="{background:getExchangeColor(eid)}"></span>{{ getExchangeName(eid) }}</span>
+        </div>
+      </div>
+      <div class="chart-body tall">
+        <canvas ref="chartMultiCanvas"></canvas>
+      </div>
     </div>
   </div>
 
   <div class="tbl-wrap">
     <div class="tbl-hdr">
-      <div class="tbl-title">Market Data · dbo.{{ currentTableName }}</div>
-      <div class="row-ct">{{ filteredRows.length }} 筆 / 共 {{ tableData.length }} 筆</div>
+      <div class="tbl-title">Market Data Table ⚡ dbo.{{ currentTableName }}</div>
+      <div class="row-ct">{{ filteredRows.length }} rows displayed</div>
     </div>
     <table>
       <thead>
         <tr>
-          <th @click="sortBy('Time')"               :class="{sorted:sortKey==='Time'}">Time {{ si('Time') }}</th>
-          <th @click="sortBy('Symbol')"             :class="{sorted:sortKey==='Symbol'}">Symbol {{ si('Symbol') }}</th>
-          <th @click="sortBy('Spot_bids')"          :class="{sorted:sortKey==='Spot_bids'}">Spot Bid {{ si('Spot_bids') }}</th>
-          <th @click="sortBy('Spot_asks')"          :class="{sorted:sortKey==='Spot_asks'}">Spot Ask {{ si('Spot_asks') }}</th>
-          <th @click="sortBy('Contract_bids')"      :class="{sorted:sortKey==='Contract_bids'}">Contract Bid {{ si('Contract_bids') }}</th>
-          <th @click="sortBy('Contract_asks')"      :class="{sorted:sortKey==='Contract_asks'}">Contract Ask {{ si('Contract_asks') }}</th>
-          <th @click="sortBy('Open_position_Gap')"  :class="{sorted:sortKey==='Open_position_Gap'}">Open Gap % {{ si('Open_position_Gap') }}</th>
-          <th @click="sortBy('Close_position_Gap')" :class="{sorted:sortKey==='Close_position_Gap'}">Close Gap % {{ si('Close_position_Gap') }}</th>
-          <th @click="sortBy('Open_position_Gap2nd')"  :class="{sorted:sortKey==='Open_position_Gap2nd'}">Open Gap2 % {{ si('Open_position_Gap2nd') }}</th>
-          <th @click="sortBy('Close_position_Gap2nd')" :class="{sorted:sortKey==='Close_position_Gap2nd'}">Close Gap2 % {{ si('Close_position_Gap2nd') }}</th>
+          <th @click="sortBy('Time')">Time {{ si('Time') }}</th>
+          <th @click="sortBy('Symbol')">Symbol {{ si('Symbol') }}</th>
+          <th>Spot Bid</th><th>Spot Ask</th><th>Contract Bid</th><th>Contract Ask</th>
+          <th @click="sortBy('Open_position_Gap')">Open Gap %</th>
+          <th @click="sortBy('Close_position_Gap')">Close Gap %</th>
+          <th @click="sortBy('Open_position_Gap2nd')">Open Gap2 %</th>
+          <th @click="sortBy('Close_position_Gap2nd')">Close Gap2 %</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-if="isLoading && tableData.length===0" class="loading-row"><td colspan="10"><span class="spinner"></span>載入資料中...</td></tr>
-        <template v-else>
-          <tr v-for="row in pagedRows" :key="row._uid" :class="{rf:row._new}">
-            <td class="t-dim">{{ row.Time }}</td>
-            <td><span class="sym-badge"><span class="sdot"></span>{{ row.Symbol }}</span></td>
-            <td class="pbid">{{ fmt(row.Spot_bids) }}</td>
-            <td class="pask">{{ fmt(row.Spot_asks) }}</td>
-            <td class="pbid">{{ fmt(row.Contract_bids) }}</td>
-            <td class="pask">{{ fmt(row.Contract_asks) }}</td>
-            <td class="gap-cell" :class="gapClass(row.Open_position_Gap)">{{ fmtGap(row.Open_position_Gap) }}</td>
-            <td class="gap-cell" :class="gapClass(row.Close_position_Gap)">{{ fmtGap(row.Close_position_Gap) }}</td>
-            <td class="gap-cell" :class="gapClass(row.Open_position_Gap2nd)">{{ fmtGap(row.Open_position_Gap2nd) }}</td>
-            <td class="gap-cell" :class="gapClass(row.Close_position_Gap2nd)">{{ fmtGap(row.Close_position_Gap2nd) }}</td>
-          </tr>
-          <tr v-if="!pagedRows.length && !isLoading"><td colspan="10" style="text-align:center;padding:36px;color:var(--dim)">— 無符合資料 —</td></tr>
-        </template>
+        <tr v-for="row in pagedRows" :key="row._uid">
+          <td style="color:var(--dim); font-size:11px;">{{ row.Time.slice(11,19) }}</td>
+          <td><span class="sym-badge">{{ row.Symbol }}</span></td>
+          <td class="pbid">{{ fmt(row.Spot_bids) }}</td>
+          <td class="pask">{{ fmt(row.Spot_asks) }}</td>
+          <td class="pbid">{{ fmt(row.Contract_bids) }}</td>
+          <td class="pask">{{ fmt(row.Contract_asks) }}</td>
+          <td class="gap-cell" :class="gapClass(row.Open_position_Gap)">{{ fmtGap(row.Open_position_Gap) }}</td>
+          <td class="gap-cell" :class="gapClass(row.Close_position_Gap)">{{ fmtGap(row.Close_position_Gap) }}</td>
+          <td class="gap-cell" :class="gapClass(row.Open_position_Gap2nd)">{{ fmtGap(row.Open_position_Gap2nd) }}</td>
+          <td class="gap-cell" :class="gapClass(row.Close_position_Gap2nd)">{{ fmtGap(row.Close_position_Gap2nd) }}</td>
+        </tr>
       </tbody>
     </table>
-    <div class="pagi">
-      <span class="pg-info">第 {{ currentPage }} / {{ totalPages }} 頁</span>
-      <button class="pg-btn" @click="currentPage=1"          :disabled="currentPage===1">«</button>
-      <button class="pg-btn" @click="currentPage--"          :disabled="currentPage===1">‹</button>
-      <button v-for="p in visiblePages" :key="p" class="pg-btn" :class="{on:p===currentPage}" @click="currentPage=p">{{ p }}</button>
-      <button class="pg-btn" @click="currentPage++"          :disabled="currentPage===totalPages">›</button>
-      <button class="pg-btn" @click="currentPage=totalPages" :disabled="currentPage===totalPages">»</button>
+    <div style="padding:16px; text-align:right;">
+      <button class="btn-action" @click="currentPage--" :disabled="currentPage===1">PREV</button>
+      <span style="margin:0 15px; font-size:12px;">PAGE {{ currentPage }} / {{ totalPages }}</span>
+      <button class="btn-action" @click="currentPage++" :disabled="currentPage===totalPages">NEXT</button>
     </div>
   </div>
 
   <div class="footer">
-    <span>DATABASE: Crypto · TABLE: dbo.{{ currentTableName }} · API: FastAPI</span>
-    <span>最後更新：{{ lastFetch }}</span>
+    <span>DATABASE: Crypto | TABLE: dbo.{{ currentTableName }} | API: FastAPI</span>
+    <span>LAST FETCH: {{ lastFetch }}</span>
   </div>
 </div>
 
 <script>
-const{createApp,ref,computed,watch,onMounted,onUnmounted,nextTick}=Vue;
-const FETCH_MINUTES=[{l:'1分',v:1},{l:'5分',v:5},{l:'15分',v:15},{l:'30分',v:30},{l:'1小時',v:60}];
-const CHART_SERIES={
+const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
+const fetchMinutes = [{l:'1m',v:1},{l:'5m',v:5},{l:'15m',v:15},{l:'30m',v:30},{l:'1h',v:60}];
+const CHART_SERIES = {
   gap:[
     {key:'Open_position_Gap',label:'Open Gap %',color:'#00e676',backgroundColor:'rgba(0,230,118,0.07)',fill:true},
     {key:'Close_position_Gap',label:'Close Gap %',color:'#ff6b35',backgroundColor:'rgba(255,107,53,0.07)',fill:true}
   ],
   price:[
-    {key:'Spot_bids',label:'Spot Bids',color:'#00e676',backgroundColor:'rgba(0,230,118,0.06)',fill:false},
-    {key:'Spot_asks',label:'Spot Asks',color:'#ff1744',backgroundColor:'rgba(255,23,68,0.06)',fill:false},
-    {key:'Contract_bids',label:'Contract Bids',color:'#00b0ff',backgroundColor:'rgba(0,176,255,0.06)',fill:false},
-    {key:'Contract_asks',label:'Contract Asks',color:'#ffab00',backgroundColor:'rgba(255,171,0,0.06)',fill:false}
+    {key:'Spot_bids',label:'Spot Bid',color:'#00e676',backgroundColor:'transparent',fill:false},
+    {key:'Spot_asks',label:'Spot Ask',color:'#ff1744',backgroundColor:'transparent',fill:false},
+    {key:'Contract_bids',label:'Contract Bid',color:'#00b0ff',backgroundColor:'transparent',fill:false},
+    {key:'Contract_asks',label:'Contract Ask',color:'#ffab00',backgroundColor:'transparent',fill:false}
   ]
 };
-let _uid=0;
+const EXCHANGE_COLORS = { bybit:'#00e5ff', binance:'#f3ba2f', okx:'#ffffff' };
+let _uid = 0;
 
 createApp({
   setup(){
-    const exchanges=ref([]);
-    const currentExchange=ref('bybit');
-    const symbols=ref([]),selectedSymbol=ref('ALL'),searchText=ref(''),sortKey=ref('Time'),sortDir=ref(-1);
-    const pageSize=ref(25),currentPage=ref(1),autoRefresh=ref(true),currentTime=ref(''),lastFetch=ref('—');
-    const tableData=ref([]),isLoading=ref(false),dbStatus=ref('loading'),fetchMin=ref(5);
-    const fetchMinutes=ref(FETCH_MINUTES);
-    const chartMode=ref('gap');
-    const chartCanvas=ref(null);
-    let timer=null;
-    let chartInstance=null;
+    const exchanges = ref([]), currentExchange = ref('bybit');
+    const symbols = ref([]), selectedSymbol = ref('BTCUSDT'), searchText = ref('');
+    const tableData = ref([]), multiData = ref({}), multiExchanges = ref(['bybit', 'binance', 'okx']), multiSymbol = ref('BTCUSDT');
+    const isLoading = ref(false), dbStatus = ref('loading'), fetchMin = ref(5), pageSize = ref(25), currentPage = ref(1);
+    const lastFetch = ref('--'), currentTime = ref('--'), addExchangeId = ref('');
+    const sortKey = ref('Time'), sortDir = ref(-1);
 
-    const currentExchangeInfo=computed(()=>exchanges.value.find(e=>e.id===currentExchange.value)||{});
-    const currentExchangeName=computed(()=>currentExchangeInfo.value.name||'');
-    const currentTableName=computed(()=>currentExchangeInfo.value.db_table||'');
-    const activeChartLegend=computed(()=>CHART_SERIES[chartMode.value].map(({label,color})=>({label,color})));
+    const chartGapCanvas = ref(null), chartPriceCanvas = ref(null), chartMultiCanvas = ref(null);
+    let chartGapInstance = null, chartPriceInstance = null, chartMultiInstance = null;
+    let timer = null;
 
-    function tick(){currentTime.value=new Date().toLocaleTimeString('zh-TW');}
-    tick();
+    const currentExchangeInfo = computed(() => exchanges.value.find(e => e.id === currentExchange.value) || {});
+    const currentExchangeName = computed(() => currentExchangeInfo.value.name || '');
+    const currentTableName = computed(() => currentExchangeInfo.value.db_table || '');
+    const dbStatusText = computed(() => dbStatus.value === 'ok' ? 'DB CONNECTED' : 'DB ERROR');
 
-    // ── Chart ──
-    function buildChartData(){
-      const sym=selectedSymbol.value==='ALL'?null:selectedSymbol.value;
-      const series=CHART_SERIES[chartMode.value];
-      const rows=[...tableData.value]
-        .filter(r=>sym?r.Symbol===sym:true)
-        .filter(r=>series.some(item=>r[item.key]!=null))
-        .sort((a,b)=>a.Time<b.Time?-1:1)
-        .slice(-120);
-      return{
-        labels:rows.map(r=>r.Time.slice(11,19)),
-        datasets:series.map(item=>({
-          label:item.label,
-          data:rows.map(r=>r[item.key]!=null?parseFloat(r[item.key]):null),
-          borderColor:item.color,
-          backgroundColor:item.backgroundColor,
-          borderWidth:1.5,
-          pointRadius:0,
-          tension:0.3,
-          fill:item.fill,
-          spanGaps:true
-        }))
-      };
-    }
+    function tick() { currentTime.value = new Date().toLocaleTimeString('zh-TW'); }
 
-    function formatChartValue(value){
-      if(value==null)return '—';
-      const n=parseFloat(value);
-      if(Number.isNaN(n))return value;
-      return chartMode.value==='gap'
-        ? `${n>=0?'+':''}${n.toFixed(4)}%`
-        : fmt(n);
-    }
-
-    function initChart(){
-      if(!chartCanvas.value)return;
-      if(chartInstance){chartInstance.destroy();chartInstance=null;}
-      const{labels,datasets}=buildChartData();
-      chartInstance=new Chart(chartCanvas.value,{
-        type:'line',
-        data:{
-          labels,
-          datasets
-        },
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          animation:{duration:0},
-          interaction:{mode:'index',intersect:false},
-          plugins:{
-            legend:{display:false},
-            tooltip:{
-              backgroundColor:'rgba(13,20,32,0.95)',
-              borderColor:'#1a2540',
-              borderWidth:1,
-              titleColor:'#5a7090',
-              bodyColor:'#c8d8f0',
-              titleFont:{family:'Share Tech Mono',size:10},
-              bodyFont:{family:'Share Tech Mono',size:11},
-              callbacks:{
-                label(ctx){
-                  const v=ctx.parsed.y;
-                  if(v==null)return null;
-                  return `${ctx.dataset.label}: ${formatChartValue(v)}`;
-                }
-              }
-            }
-          },
-          scales:{
-            x:{ticks:{color:'#5a7090',font:{family:'Share Tech Mono',size:9},maxTicksLimit:10,maxRotation:0},grid:{color:'rgba(26,37,64,0.6)'},border:{color:'#1a2540'}},
-            y:{ticks:{color:'#5a7090',font:{family:'Share Tech Mono',size:9},callback:v=>chartMode.value==='gap'?(v>=0?'+':'')+v.toFixed(3)+'%':fmt(v)},grid:{color:'rgba(26,37,64,0.6)'},border:{color:'#1a2540'}}
-          }
-        }
-      });
-    }
-
-    function updateChart(){
-      if(!chartInstance){initChart();return;}
-      const{labels,datasets}=buildChartData();
-      chartInstance.data.labels=labels;
-      chartInstance.data.datasets=datasets;
-      chartInstance.update('none');
-    }
-
-    function setChartMode(mode){
-      if(chartMode.value===mode)return;
-      chartMode.value=mode;
-      updateChart();
-    }
-
-    // ── Fetch ──
-    async function fetchExchanges(){
-      try{
-        const r=await fetch('/api/exchanges');
-        const j=await r.json();
-        if(j.success){
-          exchanges.value=j.exchanges;
-          if(exchanges.value.length>0&&!currentExchange.value)currentExchange.value=exchanges.value[0].id;
-        }
-      }catch(e){console.warn('fetchExchanges error',e);}
-    }
-
-    async function fetchSymbols(){
-      try{
-        const r=await fetch(`/api/${currentExchange.value}/symbols`);
-        const j=await r.json();
-        if(j.success)symbols.value=j.symbols;
-      }catch(e){console.warn('fetchSymbols error',e);}
-    }
-
-    async function fetchData(){
-      isLoading.value=true;
-      try{
-        const sym=selectedSymbol.value==='ALL'?'':selectedSymbol.value;
-        const url=`/api/${currentExchange.value}/data?minutes=${fetchMin.value}&limit=1000${sym?'&symbol='+sym:''}`;
-        const r=await fetch(url);
-        const j=await r.json();
-        if(j.success){
-          const existingKeys=new Set(tableData.value.map(row=>row.Time+'|'+row.Symbol));
-          tableData.value=j.data.map(row=>({
-            ...row,
-            _uid:existingKeys.has(row.Time+'|'+row.Symbol)
-              ?(tableData.value.find(x=>x.Time+'|'+x.Symbol===row.Time+'|'+row.Symbol)||{})._uid||++_uid
-              :++_uid,
-            _new:!existingKeys.has(row.Time+'|'+row.Symbol)
-          }));
-          setTimeout(()=>{tableData.value.forEach(row=>row._new=false);},800);
-          dbStatus.value='ok';
-          lastFetch.value=new Date().toLocaleTimeString('zh-TW');
-          await nextTick();
-          initChart();
-        }else{dbStatus.value='err';}
-      }catch(e){dbStatus.value='err';console.error(e);}
-      finally{isLoading.value=false;tick();}
-    }
-
-    async function fetchPartial(){
-      try{
-        const sym=selectedSymbol.value==='ALL'?'':selectedSymbol.value;
-        const url=`/api/${currentExchange.value}/data?minutes=1&limit=100${sym?'&symbol='+sym:''}`;
-        const r=await fetch(url);
-        const j=await r.json();
-        if(j.success){
-          const existingKeys=new Set(tableData.value.map(row=>row.Time+'|'+row.Symbol));
-          const newRows=j.data
-            .filter(row=>!existingKeys.has(row.Time+'|'+row.Symbol))
-            .map(row=>({...row,_uid:++_uid,_new:true}));
-          if(newRows.length>0){
-            tableData.value=newRows.concat(tableData.value);
-            if(tableData.value.length>2000)tableData.value=tableData.value.slice(0,2000);
-            setTimeout(()=>{tableData.value.forEach(row=>row._new=false);},800);
-            updateChart();
-          }
-          dbStatus.value='ok';
-          lastFetch.value=new Date().toLocaleTimeString('zh-TW');
-        }else{dbStatus.value='err';}
-      }catch(e){dbStatus.value='err';console.error(e);}
-      tick();
-    }
-
-    async function onExchangeChange(){
-      tableData.value=[];
-      if(chartInstance){chartInstance.destroy();chartInstance=null;}
-      await fetchSymbols();
-      selectedSymbol.value='ALL';
-      await fetchData();
-    }
-
-    function toggleAuto(){autoRefresh.value=!autoRefresh.value;autoRefresh.value?startTimer():stopTimer();}
-    function startTimer(){timer=setInterval(fetchPartial,2000);}
-    function stopTimer(){clearInterval(timer);timer=null;}
-
-    onMounted(async()=>{
-      await fetchExchanges();
-      await fetchSymbols();
-      await fetchData();
-      startTimer();
-    });
-    onUnmounted(()=>{stopTimer();if(chartInstance)chartInstance.destroy();});
-
-    watch([pageSize,searchText],()=>{currentPage.value=1;});
-
-    const dbStatusText=computed(()=>dbStatus.value==='ok'?'✓ DB 已連線':dbStatus.value==='err'?'✗ DB 連線失敗':'⟳ 連線中...');
-
-    const filteredRows=computed(()=>{
-      let rows=tableData.value;
-      if(searchText.value.trim()){
-        const q=searchText.value.trim().toLowerCase();
-        rows=rows.filter(r=>(r.Symbol||'').toLowerCase().includes(q)||(r.Time||'').includes(q));
+    // --- Actions ---
+    function addMultiExchange() {
+      if (addExchangeId.value && !multiExchanges.value.includes(addExchangeId.value)) {
+        multiExchanges.value.push(addExchangeId.value);
+        fetchMultiData();
       }
-      return[...rows].sort((a,b)=>{
-        const av=a[sortKey.value],bv=b[sortKey.value];
-        if(av==null&&bv==null)return 0;
-        if(av==null)return 1;if(bv==null)return -1;
-        return av<bv?-sortDir.value:av>bv?sortDir.value:0;
+    }
+    function removeMultiExchange(eid) {
+      multiExchanges.value = multiExchanges.value.filter(e => e !== eid);
+      fetchMultiData();
+    }
+    function getExchangeName(id) { return (exchanges.value.find(e => e.id === id) || {name: id}).name; }
+    function getExchangeColor(id) { return EXCHANGE_COLORS[id] || '#5a7090'; }
+
+    // --- Fetching ---
+    async function fetchExchanges() {
+      const r = await fetch('/api/exchanges');
+      const j = await r.json();
+      if(j.success) exchanges.value = j.exchanges;
+    }
+    async function fetchSymbols() {
+      const r = await fetch(`/api/${currentExchange.value}/symbols`);
+      const j = await r.json();
+      if(j.success) {
+        symbols.value = j.symbols;
+        if(!symbols.value.includes(selectedSymbol.value)) selectedSymbol.value = symbols.value[0] || 'ALL';
+        if(!symbols.value.includes(multiSymbol.value)) multiSymbol.value = symbols.value[0] || '';
+      }
+    }
+    async function fetchData() {
+      isLoading.value = true;
+      try {
+        const sym = selectedSymbol.value === 'ALL' ? '' : selectedSymbol.value;
+        const url = `/api/${currentExchange.value}/data?minutes=${fetchMin.value}&limit=1000${sym ? '&symbol='+sym : ''}`;
+        const r = await fetch(url);
+        const j = await r.json();
+        if(j.success) {
+          tableData.value = j.data.map(row => ({ ...row, _uid: ++_uid }));
+          dbStatus.value = 'ok'; lastFetch.value = new Date().toLocaleTimeString('zh-TW');
+          await nextTick(); updateSingleCharts();
+        }
+      } catch(e) { dbStatus.value = 'err'; } finally { isLoading.value = false; tick(); }
+    }
+    async function fetchMultiData() {
+      if(!multiExchanges.value.length || !multiSymbol.value) return;
+      try {
+        const p = new URLSearchParams();
+        multiExchanges.value.forEach(e => p.append('exchange', e));
+        p.append('symbol', multiSymbol.value); p.append('minutes', fetchMin.value);
+        const r = await fetch(`/api/multi/data?${p.toString()}`);
+        const j = await r.json();
+        if(j.success) { multiData.value = j.data; await nextTick(); updateMultiChart(); }
+      } catch(e) {}
+    }
+
+    // --- Charts ---
+    function updateSingleCharts() {
+      const rows = [...tableData.value].sort((a,b) => a.Time > b.Time ? 1 : -1).slice(-150);
+      const labels = rows.map(r => r.Time.slice(11,19));
+
+      chartGapInstance = renderLineChart(chartGapCanvas.value, chartGapInstance, {
+        labels,
+        datasets: CHART_SERIES.gap.map(s => ({
+          label: s.label, borderColor: s.color, backgroundColor: s.backgroundColor, fill: s.fill,
+          data: rows.map(r => r[s.key])
+        }))
+      }, 'gap');
+
+      chartPriceInstance = renderLineChart(chartPriceCanvas.value, chartPriceInstance, {
+        labels,
+        datasets: CHART_SERIES.price.map(s => ({
+          label: s.label, borderColor: s.color, backgroundColor: 'transparent', fill: false,
+          data: rows.map(r => r[s.key])
+        }))
+      }, 'price');
+    }
+
+    function updateMultiChart() {
+      const allTimes = new Set();
+      multiExchanges.value.forEach(eid => (multiData.value[eid]||[]).forEach(r => allTimes.add(r.Time)));
+      const sortedTimes = Array.from(allTimes).sort().slice(-150);
+
+      const datasets = multiExchanges.value.map(eid => ({
+        label: getExchangeName(eid), borderColor: getExchangeColor(eid), backgroundColor: 'transparent', fill: false,
+        data: sortedTimes.map(t => {
+          const row = (multiData.value[eid]||[]).find(r => r.Time === t);
+          return row ? row.Spot_asks : null;
+        })
+      }));
+
+      chartMultiInstance = renderLineChart(chartMultiCanvas.value, chartMultiInstance, {
+        labels: sortedTimes.map(t => t.slice(11,19)),
+        datasets
+      }, 'price');
+    }
+
+    function renderLineChart(canvas, instance, data, mode) {
+      if(!canvas) return null;
+      if(instance) {
+        instance.data = data;
+        instance.update('none');
+        return instance;
+      }
+      return new Chart(canvas, {
+        type: 'line', data,
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: {duration: 0},
+          interaction: {mode: 'index', intersect: false},
+          plugins: { legend: {display: false} },
+          scales: {
+            x: { ticks: {color: '#5a7090', font: {size: 9}}, grid: {color: 'rgba(26,37,64,0.3)'} },
+            y: { ticks: {color: '#5a7090', font: {size: 9}, callback: v => mode==='gap' ? v.toFixed(3)+'%' : fmt(v)}, grid: {color: 'rgba(26,37,64,0.3)'} }
+          }
+        }
       });
+    }
+
+    // --- Helpers ---
+    async function onExchangeChange() { await fetchSymbols(); fetchData(); }
+    const filteredRows = computed(() => {
+      let r = tableData.value;
+      if(searchText.value) r = r.filter(x => x.Symbol.toLowerCase().includes(searchText.value.toLowerCase()));
+      return r.sort((a,b) => (a[sortKey.value] > b[sortKey.value] ? 1 : -1) * sortDir.value);
     });
+    const totalPages = computed(() => Math.ceil(filteredRows.value.length / pageSize.value));
+    const pagedRows = computed(() => filteredRows.value.slice((currentPage.value-1)*pageSize.value, currentPage.value*pageSize.value));
+    function sortBy(k) { if(sortKey.value===k) sortDir.value*=-1; else {sortKey.value=k; sortDir.value=-1;} }
+    function si(k) { return sortKey.value===k ? (sortDir.value===1?'▲':'▼') : ''; }
+    function fmt(v) { return v == null ? '--' : parseFloat(v).toLocaleString('en-US',{minimumFractionDigits:2}); }
+    function fmtGap(v) { return v == null ? '--' : (v>=0?'+':'')+parseFloat(v).toFixed(4)+'%'; }
+    function gapClass(v) { return v > 0 ? 'gp' : v < 0 ? 'gn' : ''; }
 
-    const totalPages=computed(()=>Math.max(1,Math.ceil(filteredRows.value.length/pageSize.value)));
-    const pagedRows=computed(()=>{const s=(currentPage.value-1)*pageSize.value;return filteredRows.value.slice(s,s+pageSize.value);});
-    const visiblePages=computed(()=>{const tp=totalPages.value,cp=currentPage.value,p=[];for(let i=Math.max(1,cp-2);i<=Math.min(tp,cp+2);i++)p.push(i);return p;});
+    onMounted(async () => {
+      await fetchExchanges(); await fetchSymbols();
+      fetchData(); fetchMultiData();
+      timer = setInterval(() => { fetchData(); fetchMultiData(); }, 5000);
+      tick();
+    });
+    onUnmounted(() => clearInterval(timer));
 
-    function sortBy(k){if(sortKey.value===k)sortDir.value*=-1;else{sortKey.value=k;sortDir.value=-1;}currentPage.value=1;}
-    function si(k){return sortKey.value!==k?'↕':sortDir.value===-1?'↓':'↑';}
-    function fmt(v){if(v==null)return'—';const n=parseFloat(v);if(n>=1000)return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});if(n>=1)return n.toFixed(4);return n.toFixed(6);}
-    function fmtGap(v){if(v==null)return'—';const n=parseFloat(v);return(n>=0?'+':'')+n.toFixed(4)+'%';}
-    function gapClass(v){if(v==null)return'nd';const n=parseFloat(v);return n>0?'gp':n<0?'gn':'gz';}
-
-    return{exchanges,currentExchange,currentExchangeName,currentTableName,symbols,selectedSymbol,searchText,sortKey,sortDir,pageSize,currentPage,autoRefresh,currentTime,lastFetch,tableData,isLoading,dbStatus,dbStatusText,fetchMin,filteredRows,pagedRows,totalPages,visiblePages,fetchMinutes,fetchData,onExchangeChange,toggleAuto,sortBy,si,fmt,fmtGap,gapClass,chartCanvas,chartMode,activeChartLegend,setChartMode};
+    return {
+      exchanges, currentExchange, currentExchangeName, currentTableName, symbols, selectedSymbol, multiExchanges, multiSymbol, multiData,
+      addExchangeId, searchText, tableData, dbStatus, dbStatusText, fetchMin, fetchMinutes, lastFetch, currentTime,
+      chartGapCanvas, chartPriceCanvas, chartMultiCanvas, CHART_SERIES,
+      filteredRows, pagedRows, currentPage, totalPages,
+      onExchangeChange, fetchData, fetchMultiData, addMultiExchange, removeMultiExchange, getExchangeName, getExchangeColor,
+      sortBy, si, fmt, fmtGap, gapClass
+    };
   }
 }).mount('#app');
 </script>

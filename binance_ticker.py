@@ -39,7 +39,7 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 
 log = logging.getLogger("binance_ticker")
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 log.addHandler(file_handler)
 log.addHandler(console_handler)
 
@@ -102,6 +102,7 @@ def on_message(_, message, market_type):
     if symbol not in latest_prices or bids is None or asks is None:
         return
 
+    # 只更新快取，不處理邏輯，確保 WS 執行緒極速運行
     latest_prices[symbol][f"{market_type}_bids"] = float(bids)
     latest_prices[symbol][f"{market_type}_asks"] = float(asks)
 
@@ -125,21 +126,30 @@ def run_ws(ws_url, market_type):
 
 
 def snapshot_loop():
+    """
+    仿造 Bybit 邏輯：每秒固定掃描一次快照並放入隊列
+    """
     while True:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        time_str = now.strftime("%Y-%m-%d %H:%M:%S")
         rows = []
         ready_count = 0
-
         for symbol, prices in latest_prices.items():
-            if all(value is not None for value in prices.values()):
-                rows.append({"Time": now, "symbol": symbol, **prices})
+            # 檢查是否 Spot 和 Contract 都有資料
+            if all(v is not None for v in prices.values()):
+                rows.append({"Time": time_str, "symbol": symbol, **prices})
                 ready_count += 1
+            else:
+                # 調試用：如果是 BTC 但沒資料，印出缺少什麼
+                if "BTCUSDT" in symbol:
+                    missing = [k for k, v in prices.items() if v is None]
+                    log.debug(f"⏳ {symbol} waiting for: {missing}")
 
         if rows:
             data_queue.put(pd.DataFrame(rows))
-            log.info(f"Snapshot: {ready_count}/{len(SYMBOLS)} symbols ready")
+            log.info(f"📊 Snapshot: {ready_count}/{len(SYMBOLS)} symbols ready")
         else:
-            log.info(f"Waiting... {ready_count}/{len(SYMBOLS)} symbols ready")
+            log.info(f"⏳ Waiting for data... {ready_count}/{len(SYMBOLS)} symbols ready")
 
         time.sleep(1)
 
@@ -162,13 +172,14 @@ def upload_sql():
                     autocommit=True,
                 )
                 cursor = conn.cursor()
-                log.info("MSSQL connected")
+                log.info("💾 MSSQL connected")
             except Exception as exc:
-                log.error(f"MSSQL connect failed: {exc}")
+                log.error(f"❌ MSSQL connect failed: {exc}")
                 time.sleep(10)
                 continue
 
         try:
+            # 從隊列獲取 DataFrame
             df = data_queue.get(timeout=5)
             for _, row in df.iterrows():
                 cursor.execute(
@@ -182,11 +193,14 @@ def upload_sql():
                         row["Contract_asks"],
                     ),
                 )
-            log.info(f"Written to MSSQL: {len(df)} rows")
+            log.info(f"✅ Written to MSSQL: {len(df)} rows")
+
+            if data_queue.qsize() > 50:
+                log.warning(f"⚠️ Database queue pressure: {data_queue.qsize()} rows")
         except queue.Empty:
             pass
         except Exception as exc:
-            log.error(f"MSSQL write failed: {exc}")
+            log.error(f"❌ MSSQL write failed: {exc}")
             conn = None
             cursor = None
             time.sleep(5)
@@ -196,9 +210,15 @@ if __name__ == "__main__":
     if EXCHANGE != "binance":
         raise ValueError("binance_ticker.py requires EXCHANGE=binance")
 
-    log.info(f"{CURRENT_EXCHANGE['display_name']} started")
+    log.info(f"🚀 {CURRENT_EXCHANGE['display_name']} started (Snapshot mode)")
     threading.Thread(target=heartbeat_server, daemon=True).start()
+
+    # 啟動 WebSocket 連線執行緒
     threading.Thread(target=run_ws, args=(CURRENT_EXCHANGE["ws_spot_url"], "Spot"), daemon=True).start()
     threading.Thread(target=run_ws, args=(CURRENT_EXCHANGE["ws_contract_url"], "Contract"), daemon=True).start()
+
+    # 啟動快照執行緒 (核心優化)
     threading.Thread(target=snapshot_loop, daemon=True).start()
+
+    # 主執行緒負責資料庫寫入
     upload_sql()

@@ -1,15 +1,16 @@
-﻿import logging
+from typing import List
+import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from binance_api import router as binance_router
 from bybit_api import router as bybit_router
-from exchange_api_common import EXCHANGES, get_conn
+from exchange_api_common import EXCHANGES, get_conn, query_multi_exchange_data
 from okx_api import router as okx_router
 
 
@@ -44,6 +45,19 @@ app.include_router(binance_router)
 app.include_router(okx_router)
 
 
+
+@app.get("/api/multi/data")
+def get_multi_data(
+    exchanges: List[str] = Query(..., alias="exchange"),
+    symbol: str = Query(..., description="幣種"),
+    minutes: int = Query(5, description="最近幾分鐘"),
+    limit: int = Query(500, description="最多幾筆"),
+):
+    try:
+        result = query_multi_exchange_data(exchanges, symbol, minutes, limit)
+        return JSONResponse(content={"success": True, "data": result})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(exc)})
 @app.get("/api/exchanges")
 def get_exchanges():
     return JSONResponse(

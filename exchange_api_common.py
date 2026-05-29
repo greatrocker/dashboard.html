@@ -104,6 +104,34 @@ def query_market_data(exchange_id: str, symbol: Optional[str], minutes: int, lim
         conn.close()
 
 
+
+def query_multi_exchange_data(exchange_ids: list, symbol: str, minutes: int, limit: int):
+    results = {}
+    conn = get_conn()
+    try:
+        for eid in exchange_ids:
+            if eid not in EXCHANGES:
+                continue
+            exchange = EXCHANGES[eid]
+            table_name = exchange['db_table']
+            prefix = exchange['column_prefix']
+
+            sql = f"""
+                SELECT TOP (?)
+                    [Time],
+                    {prefix}spot_bids AS Spot_bids,
+                    {prefix}spot_asks AS Spot_asks
+                FROM [dbo].[{table_name}]
+                WHERE Symbol = ? AND [Time] >= DATEADD(MINUTE, ?, GETDATE())
+                ORDER BY [Time] DESC
+            """
+            cursor = conn.cursor()
+            cursor.execute(sql, [limit, symbol, -minutes])
+            results[eid] = _serialize_rows(cursor)
+        return results
+    finally:
+        conn.close()
+
 def query_symbols(exchange_id: str):
     table_name = EXCHANGES[exchange_id]["db_table"]
     conn = get_conn()

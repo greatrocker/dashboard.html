@@ -1,4 +1,4 @@
-﻿# config.py
+# config.py
 import os
 
 # ==============================
