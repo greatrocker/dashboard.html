@@ -1,4 +1,4 @@
-﻿import os
+import os
 from typing import Optional
 
 import pyodbc
@@ -30,6 +30,18 @@ EXCHANGES = {
         "display_name": "OKX Market Monitor",
         "db_table": "OKX",
         "column_prefix": "OKX",
+    },
+    "mexc": {
+        "name": "MEXC",
+        "display_name": "MEXC Market Monitor",
+        "db_table": "MEXC",
+        "column_prefix": "MEXC",
+        "columns": {
+            "spot_bids": "MEXCSpot_bids",
+            "spot_asks": "MEXCSpot_asks",
+            "contract_bids": "MEXContract_bids",
+            "contract_asks": "MEXContract_asks",
+        },
     },
 }
 
@@ -71,6 +83,12 @@ def query_market_data(exchange_id: str, symbol: Optional[str], minutes: int, lim
     exchange = EXCHANGES[exchange_id]
     table_name = exchange["db_table"]
     prefix = exchange["column_prefix"]
+    columns = exchange.get("columns", {
+        "spot_bids": f"{prefix}spot_bids",
+        "spot_asks": f"{prefix}spot_asks",
+        "contract_bids": f"{prefix}Contract_bids",
+        "contract_asks": f"{prefix}Contract_asks",
+    })
 
     where_clauses = ["[Time] >= DATEADD(MINUTE, ?, GETDATE())"]
     params = [-minutes]
@@ -84,10 +102,10 @@ def query_market_data(exchange_id: str, symbol: Optional[str], minutes: int, lim
     sql = f"""
         SELECT TOP (?)
             [Time], Symbol,
-            {prefix}spot_bids AS Spot_bids,
-            {prefix}spot_asks AS Spot_asks,
-            {prefix}Contract_bids AS Contract_bids,
-            {prefix}Contract_asks AS Contract_asks,
+            {columns["spot_bids"]} AS Spot_bids,
+            {columns["spot_asks"]} AS Spot_asks,
+            {columns["contract_bids"]} AS Contract_bids,
+            {columns["contract_asks"]} AS Contract_asks,
             Open_position_Gap, Close_position_Gap,
             Open_position_Gap2nd, Close_position_Gap2nd
         FROM [dbo].[{table_name}]
@@ -115,12 +133,16 @@ def query_multi_exchange_data(exchange_ids: list, symbol: str, minutes: int, lim
             exchange = EXCHANGES[eid]
             table_name = exchange['db_table']
             prefix = exchange['column_prefix']
+            columns = exchange.get("columns", {
+                "spot_bids": f"{prefix}spot_bids",
+                "spot_asks": f"{prefix}spot_asks",
+            })
 
             sql = f"""
                 SELECT TOP (?)
                     [Time],
-                    {prefix}spot_bids AS Spot_bids,
-                    {prefix}spot_asks AS Spot_asks
+                    {columns["spot_bids"]} AS Spot_bids,
+                    {columns["spot_asks"]} AS Spot_asks
                 FROM [dbo].[{table_name}]
                 WHERE Symbol = ? AND [Time] >= DATEADD(MINUTE, ?, GETDATE())
                 ORDER BY [Time] DESC

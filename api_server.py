@@ -12,6 +12,7 @@ from binance_api import router as binance_router
 from bybit_api import router as bybit_router
 from exchange_api_common import EXCHANGES, get_conn, query_multi_exchange_data
 from okx_api import router as okx_router
+from mexc_api import router as mexc_router
 
 
 os.makedirs("logs", exist_ok=True)
@@ -43,6 +44,7 @@ app.add_middleware(
 app.include_router(bybit_router)
 app.include_router(binance_router)
 app.include_router(okx_router)
+app.include_router(mexc_router)
 
 
 

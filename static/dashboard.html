@@ -246,14 +246,14 @@ const CHART_SERIES = {
     {key:'Contract_asks',label:'Contract Ask',color:'#ffab00',backgroundColor:'transparent',fill:false}
   ]
 };
-const EXCHANGE_COLORS = { bybit:'#00e5ff', binance:'#f3ba2f', okx:'#ffffff' };
+const EXCHANGE_COLORS = { bybit:'#00e5ff', binance:'#f3ba2f', okx:'#ffffff', mexc:'#00c2a8' };
 let _uid = 0;
 
 createApp({
   setup(){
     const exchanges = ref([]), currentExchange = ref('bybit');
     const symbols = ref([]), selectedSymbol = ref('BTCUSDT'), searchText = ref('');
-    const tableData = ref([]), multiData = ref({}), multiExchanges = ref(['bybit', 'binance', 'okx']), multiSymbol = ref('BTCUSDT');
+    const tableData = ref([]), multiData = ref({}), multiExchanges = ref(['bybit', 'binance', 'okx', 'mexc']), multiSymbol = ref('BTCUSDT');
     const isLoading = ref(false), dbStatus = ref('loading'), fetchMin = ref(5), pageSize = ref(25), currentPage = ref(1);
     const lastFetch = ref('--'), currentTime = ref('--'), addExchangeId = ref('');
     const sortKey = ref('Time'), sortDir = ref(-1);

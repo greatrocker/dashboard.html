@@ -35,6 +35,15 @@ EXCHANGE_CONFIG = {
         "ws_contract_url": "wss://ws.okx.com:8443/ws/v5/public",
         "orderbook_topic_template": "books5:{symbol}",  # books5:BTC-USDT
     },
+    "mexc": {
+        "name": "MEXC",
+        "display_name": "MEXC Market Monitor",
+        "db_table": "MEXC",
+        "sp_name": "merge_market_data_mexc",
+        "ws_spot_url": "https://api.mexc.com/api/v3/ticker/bookTicker",
+        "ws_contract_url": "https://contract.mexc.com/api/v1/contract/ticker",
+        "orderbook_topic_template": "REST:{symbol}",
+    },
 }
 
 # ?嗅?鈭斗???蔭
