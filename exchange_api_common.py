@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from typing import Optional
 
 import pyodbc
@@ -41,6 +42,18 @@ EXCHANGES = {
             "spot_asks": "MEXCSpot_asks",
             "contract_bids": "MEXContract_bids",
             "contract_asks": "MEXContract_asks",
+        },
+    },
+    "gate": {
+        "name": "Gate.io",
+        "display_name": "Gate.io Market Monitor",
+        "db_table": "Gate",
+        "column_prefix": "Gate",
+        "columns": {
+            "spot_bids": "GateSpot_bids",
+            "spot_asks": "GateSpot_asks",
+            "contract_bids": "GateContract_bids",
+            "contract_asks": "GateContract_asks",
         },
     },
 }
@@ -131,18 +144,22 @@ def query_multi_exchange_data(exchange_ids: list, symbol: str, minutes: int, lim
             if eid not in EXCHANGES:
                 continue
             exchange = EXCHANGES[eid]
-            table_name = exchange['db_table']
-            prefix = exchange['column_prefix']
+            table_name = exchange["db_table"]
+            prefix = exchange["column_prefix"]
             columns = exchange.get("columns", {
                 "spot_bids": f"{prefix}spot_bids",
                 "spot_asks": f"{prefix}spot_asks",
+                "contract_bids": f"{prefix}Contract_bids",
+                "contract_asks": f"{prefix}Contract_asks",
             })
 
             sql = f"""
                 SELECT TOP (?)
                     [Time],
                     {columns["spot_bids"]} AS Spot_bids,
-                    {columns["spot_asks"]} AS Spot_asks
+                    {columns["spot_asks"]} AS Spot_asks,
+                    {columns["contract_bids"]} AS Contract_bids,
+                    {columns["contract_asks"]} AS Contract_asks
                 FROM [dbo].[{table_name}]
                 WHERE Symbol = ? AND [Time] >= DATEADD(MINUTE, ?, GETDATE())
                 ORDER BY [Time] DESC
@@ -153,6 +170,76 @@ def query_multi_exchange_data(exchange_ids: list, symbol: str, minutes: int, lim
         return results
     finally:
         conn.close()
+
+def query_spread_alert(exchange_ids: list, symbol: str, minutes: int):
+    conn = get_conn()
+    try:
+        latest_asks = {}
+        ts_data = {}
+
+        for eid in exchange_ids:
+            if eid not in EXCHANGES:
+                continue
+            exchange = EXCHANGES[eid]
+            table_name = exchange["db_table"]
+            columns = exchange.get("columns", {
+                "spot_asks": f"{exchange['column_prefix']}spot_asks",
+            })
+            ask_col = columns["spot_asks"]
+
+            cursor = conn.cursor()
+            cursor.execute(
+                f"SELECT TOP 1 {ask_col} FROM [dbo].[{table_name}] WHERE Symbol = ? ORDER BY [Time] DESC",
+                [symbol],
+            )
+            row = cursor.fetchone()
+            if row and row[0] is not None:
+                latest_asks[eid] = float(row[0])
+
+            cursor.execute(
+                f"SELECT [Time], {ask_col} FROM [dbo].[{table_name}] "
+                f"WHERE Symbol = ? AND [Time] >= DATEADD(MINUTE, ?, GETDATE()) ORDER BY [Time]",
+                [symbol, -minutes],
+            )
+            ts_data[eid] = [
+                (r[0], float(r[1])) for r in cursor.fetchall() if r[1] is not None
+            ]
+
+        if len(latest_asks) < 2:
+            return {"error": "insufficient exchange data", "is_alert": False}
+
+        asks = list(latest_asks.values())
+        current_spread_pct = (max(asks) - min(asks)) / min(asks) * 100
+
+        buckets = defaultdict(dict)
+        for eid, rows in ts_data.items():
+            for t, ask in rows:
+                key = t.replace(second=(t.second // 10) * 10, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+                buckets[key][eid] = ask
+
+        spreads = []
+        for bucket_asks in buckets.values():
+            if len(bucket_asks) >= 2:
+                v = list(bucket_asks.values())
+                spreads.append((max(v) - min(v)) / min(v) * 100)
+
+        avg_spread_pct = sum(spreads) / len(spreads) if spreads else current_spread_pct
+        max_eid = max(latest_asks, key=lambda k: latest_asks[k])
+        min_eid = min(latest_asks, key=lambda k: latest_asks[k])
+
+        return {
+            "symbol": symbol,
+            "current_spread_pct": round(current_spread_pct, 4),
+            "avg_spread_pct": round(avg_spread_pct, 4),
+            "is_alert": current_spread_pct > avg_spread_pct,
+            "latest_asks": {eid: round(ask, 4) for eid, ask in latest_asks.items()},
+            "highest_ask_exchange": max_eid,
+            "lowest_ask_exchange": min_eid,
+            "data_points": len(spreads),
+        }
+    finally:
+        conn.close()
+
 
 def query_symbols(exchange_id: str):
     table_name = EXCHANGES[exchange_id]["db_table"]

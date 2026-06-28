@@ -10,9 +10,10 @@ from fastapi.staticfiles import StaticFiles
 
 from binance_api import router as binance_router
 from bybit_api import router as bybit_router
-from exchange_api_common import EXCHANGES, get_conn, query_multi_exchange_data
+from exchange_api_common import EXCHANGES, get_conn, query_multi_exchange_data, query_spread_alert
 from okx_api import router as okx_router
 from mexc_api import router as mexc_router
+from gate_api import router as gate_router
 
 
 os.makedirs("logs", exist_ok=True)
@@ -45,6 +46,7 @@ app.include_router(bybit_router)
 app.include_router(binance_router)
 app.include_router(okx_router)
 app.include_router(mexc_router)
+app.include_router(gate_router)
 
 
 
@@ -60,6 +62,19 @@ def get_multi_data(
         return JSONResponse(content={"success": True, "data": result})
     except Exception as exc:
         return JSONResponse(status_code=500, content={"success": False, "error": str(exc)})
+@app.get("/api/spread/alert")
+def get_spread_alert(
+    exchanges: List[str] = Query(..., alias="exchange"),
+    symbol: str = Query(...),
+    minutes: int = Query(5),
+):
+    try:
+        result = query_spread_alert(exchanges, symbol, minutes)
+        return JSONResponse(content={"success": True, **result})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(exc)})
+
+
 @app.get("/api/exchanges")
 def get_exchanges():
     return JSONResponse(

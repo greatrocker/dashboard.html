@@ -260,7 +260,7 @@ createApp({
 
     const chartGapCanvas = ref(null), chartPriceCanvas = ref(null), chartMultiCanvas = ref(null);
     let chartGapInstance = null, chartPriceInstance = null, chartMultiInstance = null;
-    let timer = null;
+    let timer = null, tickTimer = null;
 
     const currentExchangeInfo = computed(() => exchanges.value.find(e => e.id === currentExchange.value) || {});
     const currentExchangeName = computed(() => currentExchangeInfo.value.name || '');
@@ -404,10 +404,11 @@ createApp({
     onMounted(async () => {
       await fetchExchanges(); await fetchSymbols();
       fetchData(); fetchMultiData();
-      timer = setInterval(() => { fetchData(); fetchMultiData(); }, 5000);
+      timer = setInterval(() => { fetchData(); fetchMultiData(); }, 1000);
+      tickTimer = setInterval(tick, 1000);
       tick();
     });
-    onUnmounted(() => clearInterval(timer));
+    onUnmounted(() => { clearInterval(timer); clearInterval(tickTimer); });
 
     return {
       exchanges, currentExchange, currentExchangeName, currentTableName, symbols, selectedSymbol, multiExchanges, multiSymbol, multiData,

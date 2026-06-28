@@ -1,0 +1,43 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create .env
+        run: |
+          cat > .env << 'EOF'
+          MSSQL_SERVER=${{ secrets.MSSQL_SERVER }}
+          MSSQL_DATABASE=${{ secrets.MSSQL_DATABASE }}
+          MSSQL_USER=${{ secrets.MSSQL_USER }}
+          MSSQL_PASSWORD=${{ secrets.MSSQL_PASSWORD }}
+          TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+          EOF
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Run SQL migrations
+        run: |
+          docker compose run --rm --no-deps \
+            -v "$PWD/migrations:/app/migrations" \
+            -v "$PWD/migrate.py:/app/migrate.py" \
+            exchange-api python migrate.py
+
+      - name: Deploy services
+        run: docker compose up -d
+
+      - name: Health check
+        run: |
+          sleep 8
+          curl -sf http://localhost:8000/api/health | python3 -c \
+            "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('status')=='ok' else 1)"

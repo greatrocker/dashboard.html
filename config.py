@@ -44,6 +44,15 @@ EXCHANGE_CONFIG = {
         "ws_contract_url": "https://contract.mexc.com/api/v1/contract/ticker",
         "orderbook_topic_template": "REST:{symbol}",
     },
+    "gate": {
+        "name": "Gate.io",
+        "display_name": "Gate.io Market Monitor",
+        "db_table": "Gate",
+        "sp_name": "merge_market_data_gate",
+        "ws_spot_url": "https://api.gateio.ws/api/v4/spot/tickers",
+        "ws_contract_url": "https://api.gateio.ws/api/v4/futures/usdt/tickers",
+        "orderbook_topic_template": "REST:{symbol}",
+    },
 }
 
 # ?嗅?鈭斗???蔭
