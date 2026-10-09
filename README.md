@@ -18,6 +18,19 @@ exchange-monitor-complete/
 └── README.md
 ```
 
+### 支援交易所（20 家，現貨 vs USDT 永續）
+
+| 類型 | 交易所 | Ticker 檔 |
+|------|--------|-----------|
+| WebSocket / 獨立實作 | Bybit、Binance、OKX、MEXC、Gate.io | `<id>_ticker.py` |
+| REST 輪詢（共用 `rest_ticker_common.py`） | Bitget、KuCoin、HTX、BingX、Crypto.com、Kraken、Coinbase、Bitfinex、WhiteBIT、XT.com、Phemex、Poloniex、Deepcoin、Toobit、Pionex | `<id>_ticker.py`（只含該交易所的 URL 與欄位對應） |
+
+- 每家交易所：一個 Table + `merge_market_data_<id>` SP、一個 `<id>_ticker.py` 容器、一個 `<id>_api.py`（`/api/<id>/data`、`/api/<id>/symbols`）
+- 新 15 家的 Table / SP：`migrations/002_top20_exchanges.sql`
+- Heartbeat port：Bybit 9000 … Gate 9004、Bitget 9005 … Pionex 9019
+- 註：Crypto.com / Kraken 永續以 USD 計價、Coinbase 永續（International）以 USDC 計價，其餘皆為 USDT
+- Coinbase 只提供單一幣種查詢 API，輪詢間隔為 3 秒；其他為 1 秒
+
 ---
 
 ## 🚀 快速開始
@@ -124,7 +137,7 @@ docker compose up -d --build
 
 ## 📊 Dashboard 使用
 
-1. **切換交易所**：頂部下拉選單選擇 Bybit / Binance / OKX
+1. **切換交易所**：頂部下拉選單選擇 20 家交易所之一（清單來自 `/api/exchanges`）
 2. **篩選幣種**：選擇特定幣種或全部
 3. **查詢範圍**：1分 / 5分 / 15分 / 30分 / 1小時
 4. **自動更新**：每 2 秒自動拉取最新資料
@@ -153,6 +166,17 @@ docker compose up -d --build
 ---
 
 ## ➕ 新增其他交易所
+
+### 快速方式（REST 輪詢型，建議）
+
+1. 用 `002_top20_exchanges.sql` 的任一段為範本，建立 `[dbo].[<Name>]` Table 與 `merge_market_data_<id>` SP
+2. 複製任一 REST ticker（例如 `pionex_ticker.py`）為 `<id>_ticker.py`，改 URL 與 `fetch_spot` / `fetch_contract` 的欄位對應
+3. 在 `config.py` 與 `exchange_api_common.py` 的 Top-20 清單各加一行 `(id, 顯示名稱, Table 名稱)`
+4. 複製 `binance_api.py` 為 `<id>_api.py`，把 `"binance"` 改成 `"<id>"`（`api_server.py` 會自動載入）
+5. `docker-compose.yml` 複製一段 `<id>-ticker`（使用 `*rest-ticker` 範本），換 EXCHANGE / port / 檔名
+6. `static/dashboard.html` 的 `EXCHANGE_COLORS` 加一個顏色（選填）
+
+### 傳統方式（WebSocket 型）
 
 ### 步驟 1：在 `api_server.py` 加入配置
 

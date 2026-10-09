@@ -10,7 +10,7 @@ import pyodbc
 MSSQL_SERVER   = os.getenv("MSSQL_SERVER",   "host.docker.internal")
 MSSQL_DATABASE = os.getenv("MSSQL_DATABASE", "Crypto")
 MSSQL_USER     = os.getenv("MSSQL_USER",     "sa")
-MSSQL_PASSWORD = os.getenv("MSSQL_PASSWORD", "1qaz2WSX")
+MSSQL_PASSWORD = os.getenv("MSSQL_PASSWORD", "")   # 由 .env 提供，不在程式碼中寫死
 
 
 def get_conn():

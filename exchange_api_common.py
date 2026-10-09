@@ -10,45 +10,42 @@ from fastapi.responses import JSONResponse
 MSSQL_SERVER = os.getenv("MSSQL_SERVER", "host.docker.internal")
 MSSQL_DATABASE = os.getenv("MSSQL_DATABASE", "Crypto")
 MSSQL_USER = os.getenv("MSSQL_USER", "sa")
-MSSQL_PASSWORD = os.getenv("MSSQL_PASSWORD", "1qaz2WSX")
+MSSQL_PASSWORD = os.getenv("MSSQL_PASSWORD", "")   # 由 .env 提供，不在程式碼中寫死
 
+
+# 欄位名稱依 README / sql_setup_all.sql；只有 Gate 的 Table 使用自己的欄位命名
+DEFAULT_COLUMNS = {
+    "spot_bids": "Spot_bids",
+    "spot_asks": "Spot_asks",
+    "contract_bids": "Contract_bids",
+    "contract_asks": "Contract_asks",
+}
 
 EXCHANGES = {
     "bybit": {
         "name": "Bybit",
         "display_name": "Bybit Market Monitor",
         "db_table": "Bybit",
-        "column_prefix": "Bybit",
     },
     "binance": {
         "name": "Binance",
         "display_name": "Binance Market Monitor",
         "db_table": "Binance",
-        "column_prefix": "Binance",
     },
     "okx": {
         "name": "OKX",
         "display_name": "OKX Market Monitor",
         "db_table": "OKX",
-        "column_prefix": "OKX",
     },
     "mexc": {
         "name": "MEXC",
         "display_name": "MEXC Market Monitor",
         "db_table": "MEXC",
-        "column_prefix": "MEXC",
-        "columns": {
-            "spot_bids": "MEXCSpot_bids",
-            "spot_asks": "MEXCSpot_asks",
-            "contract_bids": "MEXContract_bids",
-            "contract_asks": "MEXContract_asks",
-        },
     },
     "gate": {
         "name": "Gate.io",
         "display_name": "Gate.io Market Monitor",
         "db_table": "Gate",
-        "column_prefix": "Gate",
         "columns": {
             "spot_bids": "GateSpot_bids",
             "spot_asks": "GateSpot_asks",
@@ -57,6 +54,26 @@ EXCHANGES = {
         },
     },
 }
+
+# 前 20 大擴充的 15 家交易所（Table 結構同 Bybit，欄位用 DEFAULT_COLUMNS）
+for _id, _name, _table in [
+    ("bitget", "Bitget", "Bitget"),
+    ("kucoin", "KuCoin", "KuCoin"),
+    ("htx", "HTX", "HTX"),
+    ("bingx", "BingX", "BingX"),
+    ("cryptocom", "Crypto.com", "CryptoCom"),
+    ("kraken", "Kraken", "Kraken"),
+    ("coinbase", "Coinbase", "Coinbase"),
+    ("bitfinex", "Bitfinex", "Bitfinex"),
+    ("whitebit", "WhiteBIT", "WhiteBIT"),
+    ("xt", "XT.com", "XT"),
+    ("phemex", "Phemex", "Phemex"),
+    ("poloniex", "Poloniex", "Poloniex"),
+    ("deepcoin", "Deepcoin", "Deepcoin"),
+    ("toobit", "Toobit", "Toobit"),
+    ("pionex", "Pionex", "Pionex"),
+]:
+    EXCHANGES[_id] = {"name": _name, "display_name": f"{_name} Market Monitor", "db_table": _table}
 
 
 def get_conn():
@@ -95,13 +112,7 @@ def _serialize_rows(cursor):
 def query_market_data(exchange_id: str, symbol: Optional[str], minutes: int, limit: int):
     exchange = EXCHANGES[exchange_id]
     table_name = exchange["db_table"]
-    prefix = exchange["column_prefix"]
-    columns = exchange.get("columns", {
-        "spot_bids": f"{prefix}spot_bids",
-        "spot_asks": f"{prefix}spot_asks",
-        "contract_bids": f"{prefix}Contract_bids",
-        "contract_asks": f"{prefix}Contract_asks",
-    })
+    columns = exchange.get("columns", DEFAULT_COLUMNS)
 
     where_clauses = ["[Time] >= DATEADD(MINUTE, ?, GETDATE())"]
     params = [-minutes]
@@ -145,13 +156,7 @@ def query_multi_exchange_data(exchange_ids: list, symbol: str, minutes: int, lim
                 continue
             exchange = EXCHANGES[eid]
             table_name = exchange["db_table"]
-            prefix = exchange["column_prefix"]
-            columns = exchange.get("columns", {
-                "spot_bids": f"{prefix}spot_bids",
-                "spot_asks": f"{prefix}spot_asks",
-                "contract_bids": f"{prefix}Contract_bids",
-                "contract_asks": f"{prefix}Contract_asks",
-            })
+            columns = exchange.get("columns", DEFAULT_COLUMNS)
 
             sql = f"""
                 SELECT TOP (?)
@@ -182,15 +187,15 @@ def query_spread_alert(exchange_ids: list, symbol: str, minutes: int):
                 continue
             exchange = EXCHANGES[eid]
             table_name = exchange["db_table"]
-            columns = exchange.get("columns", {
-                "spot_asks": f"{exchange['column_prefix']}spot_asks",
-            })
+            columns = exchange.get("columns", DEFAULT_COLUMNS)
             ask_col = columns["spot_asks"]
 
+            # 只取查詢區間內的最新價：Ticker 停掉或沒有這個幣的交易所不列入比較
             cursor = conn.cursor()
             cursor.execute(
-                f"SELECT TOP 1 {ask_col} FROM [dbo].[{table_name}] WHERE Symbol = ? ORDER BY [Time] DESC",
-                [symbol],
+                f"SELECT TOP 1 {ask_col} FROM [dbo].[{table_name}] "
+                f"WHERE Symbol = ? AND [Time] >= DATEADD(MINUTE, ?, GETDATE()) ORDER BY [Time] DESC",
+                [symbol, -minutes],
             )
             row = cursor.fetchone()
             if row and row[0] is not None:

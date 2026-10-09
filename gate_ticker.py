@@ -11,6 +11,8 @@ from logging.handlers import RotatingFileHandler
 import pandas as pd
 import pyodbc
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from config import (
     CURRENT_EXCHANGE,
@@ -30,6 +32,14 @@ SPOT_TICKER_URL = "https://api.gateio.ws/api/v4/spot/tickers"
 CONTRACT_TICKER_URL = "https://api.gateio.ws/api/v4/futures/usdt/tickers"
 REQUEST_TIMEOUT = 10
 POLL_INTERVAL = 1
+
+# 共用連線（keep-alive）：避免每次輪詢都重新 DNS 查詢 + TLS 握手；
+# 短暫 DNS / 連線錯誤由 urllib3 自動重試
+http = requests.Session()
+http.mount("https://", HTTPAdapter(max_retries=Retry(
+    total=4, connect=3, read=1, status=2, backoff_factor=0.5,
+    status_forcelist=(429, 500, 502, 503, 504), allowed_methods=frozenset({"GET"}),
+)))
 
 os.makedirs(LOG_DIR, exist_ok=True)
 log_file = f"{LOG_DIR}/{EXCHANGE}_ticker.log"
@@ -95,7 +105,7 @@ def to_float(value):
 
 
 def fetch_spot_prices():
-    response = requests.get(SPOT_TICKER_URL, timeout=REQUEST_TIMEOUT)
+    response = http.get(SPOT_TICKER_URL, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
     payload = response.json()
 
@@ -115,7 +125,7 @@ def fetch_spot_prices():
 
 
 def fetch_contract_prices():
-    response = requests.get(CONTRACT_TICKER_URL, timeout=REQUEST_TIMEOUT)
+    response = http.get(CONTRACT_TICKER_URL, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
     payload = response.json()
 

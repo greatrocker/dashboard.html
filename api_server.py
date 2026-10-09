@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Optional
+import importlib
 import logging
 import os
 from logging.handlers import RotatingFileHandler
@@ -8,12 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from binance_api import router as binance_router
-from bybit_api import router as bybit_router
-from exchange_api_common import EXCHANGES, get_conn, query_multi_exchange_data, query_spread_alert
-from okx_api import router as okx_router
-from mexc_api import router as mexc_router
-from gate_api import router as gate_router
+from exchange_api_common import (
+    EXCHANGES, get_conn, query_market_data, query_multi_exchange_data, query_spread_alert, query_symbols,
+)
+from signals_api import router as signals_router
+from paper_api import router as paper_router
 
 
 os.makedirs("logs", exist_ok=True)
@@ -38,15 +38,19 @@ app = FastAPI(title="Multi-Exchange Monitor API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
-app.include_router(bybit_router)
-app.include_router(binance_router)
-app.include_router(okx_router)
-app.include_router(mexc_router)
-app.include_router(gate_router)
+# 每個交易所一個 <exchange_id>_api.py（例如 bybit_api.py），提供 /api/<exchange_id>/data 與 /symbols
+for exchange_id in EXCHANGES:
+    app.include_router(importlib.import_module(f"{exchange_id}_api").router)
+
+# 跨交易所強力買訊號紀錄（POST 寫入 / GET 查詢）
+app.include_router(signals_router)
+
+# 套利模擬交易（signal-detector 寫入 dbo.PaperTrades）
+app.include_router(paper_router)
 
 
 
@@ -85,6 +89,41 @@ def get_exchanges():
     )
 
 
+def _unknown_exchange(exchange: str):
+    return JSONResponse(
+        status_code=404,
+        content={"success": False, "error": f"unknown exchange: {exchange}", "exchanges": list(EXCHANGES)},
+    )
+
+
+@app.get("/api/data")
+def get_data(
+    exchange: str = Query(..., description="交易所 ID"),
+    symbol: Optional[str] = Query(None, description="幣種"),
+    minutes: int = Query(5, description="最近幾分鐘"),
+    limit: int = Query(500, description="最多回傳幾筆"),
+):
+    exchange = exchange.lower()
+    if exchange not in EXCHANGES:
+        return _unknown_exchange(exchange)
+    try:
+        result = query_market_data(exchange, symbol, minutes, limit)
+        return JSONResponse(content={"success": True, "exchange": exchange, "count": len(result), "data": result})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(exc)})
+
+
+@app.get("/api/symbols")
+def get_symbols(exchange: str = Query(..., description="交易所 ID")):
+    exchange = exchange.lower()
+    if exchange not in EXCHANGES:
+        return _unknown_exchange(exchange)
+    try:
+        return JSONResponse(content={"success": True, "exchange": exchange, "symbols": query_symbols(exchange)})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(exc)})
+
+
 @app.get("/api/health")
 def health():
     try:
@@ -100,4 +139,5 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def root():
-    return FileResponse("static/dashboard.html")
+    # no-cache：瀏覽器每次都向伺服器確認，Dashboard 更新後重新整理即可看到新版
+    return FileResponse("static/dashboard.html", headers={"Cache-Control": "no-cache"})

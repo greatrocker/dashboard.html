@@ -55,6 +55,32 @@ EXCHANGE_CONFIG = {
     },
 }
 
+# Top-20 expansion: REST snapshot tickers built on rest_ticker_common.py
+# (API URLs live in each <id>_ticker.py)
+for _id, _name, _table in [
+    ("bitget", "Bitget", "Bitget"),
+    ("kucoin", "KuCoin", "KuCoin"),
+    ("htx", "HTX", "HTX"),
+    ("bingx", "BingX", "BingX"),
+    ("cryptocom", "Crypto.com", "CryptoCom"),
+    ("kraken", "Kraken", "Kraken"),
+    ("coinbase", "Coinbase", "Coinbase"),
+    ("bitfinex", "Bitfinex", "Bitfinex"),
+    ("whitebit", "WhiteBIT", "WhiteBIT"),
+    ("xt", "XT.com", "XT"),
+    ("phemex", "Phemex", "Phemex"),
+    ("poloniex", "Poloniex", "Poloniex"),
+    ("deepcoin", "Deepcoin", "Deepcoin"),
+    ("toobit", "Toobit", "Toobit"),
+    ("pionex", "Pionex", "Pionex"),
+]:
+    EXCHANGE_CONFIG[_id] = {
+        "name": _name,
+        "display_name": f"{_name} Market Monitor",
+        "db_table": _table,
+        "sp_name": f"merge_market_data_{_id}",
+    }
+
 # ?嗅?鈭斗???蔭
 if EXCHANGE not in EXCHANGE_CONFIG:
     raise ValueError(f"銝?渡?鈭斗??: {EXCHANGE}嚗?湔??? {list(EXCHANGE_CONFIG.keys())}")
@@ -79,7 +105,7 @@ SYMBOLS = [
 MSSQL_SERVER   = os.getenv("MSSQL_SERVER",   "172.26.0.1,1433")
 MSSQL_DATABASE = os.getenv("MSSQL_DATABASE", "Crypto")
 MSSQL_USER     = os.getenv("MSSQL_USER",     "sa")
-MSSQL_PASSWORD = os.getenv("MSSQL_PASSWORD", "1qaz2WSX")
+MSSQL_PASSWORD = os.getenv("MSSQL_PASSWORD", "")   # 由 .env 提供，不在程式碼中寫死
 
 # ==============================
 # Telegram ?郎閮剖?

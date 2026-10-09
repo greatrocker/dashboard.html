@@ -5,6 +5,8 @@
 <title>Multi-Exchange Monitor PRO</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#080c14;--panel:#0d1420;--border:#1a2540;--accent:#00e5ff;--accent2:#ff6b35;--pos:#00e676;--neg:#ff1744;--text:#c8d8f0;--dim:#5a7090;--mono:'Share Tech Mono',monospace;--display:'Syne',sans-serif}
@@ -23,6 +25,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .status-badge.ok{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--pos)}
 .status-badge.err{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);color:var(--neg)}
 
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:10px 22px;font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--dim);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;cursor:pointer;margin-bottom:-1px;transition:color .2s,background .2s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.on{color:var(--tab-color);background:var(--panel);border-color:var(--border);border-top:2px solid var(--tab-color)}
+.sub-tabs{margin-bottom:0}
+.sub-tabs .tab-btn{padding:8px 18px;font-size:11px}
+.sub-panel{border-top-left-radius:0}
+
 .ctrl-panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
 .ctrl-group{display:flex;flex-direction:column;gap:8px}
 .ctrl-lbl{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;font-weight:bold}
@@ -35,7 +46,7 @@ select:hover,select:focus{border-color:var(--accent);outline:none}
 .srch{background:rgba(8,12,20,0.6);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 12px;border-radius:4px;width:180px}
 
 /* Multi-Exchange List */
-.multi-box{width:240px;border:1px solid var(--border);border-radius:4px;background:rgba(8,12,20,0.4);overflow:hidden}
+.multi-box{width:280px;border:1px solid var(--border);border-radius:4px;background:rgba(8,12,20,0.4);overflow:hidden}
 .multi-list{height:80px;overflow-y:auto;padding:4px}
 .multi-item{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;font-size:11px;border-bottom:1px solid rgba(26,37,64,0.3)}
 .multi-item:last-child{border-bottom:none}
@@ -60,8 +71,16 @@ select:hover,select:focus{border-color:var(--accent);outline:none}
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(0,229,255,0.02)}
 .chart-title{font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
 .chart-legend{display:flex;align-items:center;gap:14px}
-.leg-item{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1px;color:var(--dim)}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1px;color:var(--dim);cursor:pointer;user-select:none;transition:opacity .15s}
+.leg-item:hover{color:var(--text)}
+.leg-item.off{opacity:.35;text-decoration:line-through}
 .leg-dot{width:8px;height:8px;border-radius:50%}
+.chart-legend{flex-wrap:wrap;justify-content:flex-end}
+.chart-tools{display:flex;align-items:center;gap:12px;padding:6px 18px 0;min-height:24px;font-size:9px;letter-spacing:1px;color:var(--dim)}
+.btn-resume{background:rgba(255,171,0,.12);border:1px solid rgba(255,171,0,.5);color:#ffab00;font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:3px;cursor:pointer}
+.btn-resume:hover{background:rgba(255,171,0,.22)}
+.chart-body canvas{cursor:grab}
+.chart-body canvas:active{cursor:grabbing}
 .chart-body{padding:16px 18px;height:240px;position:relative}
 .chart-body.tall{height:320px}
 
@@ -78,7 +97,8 @@ td{padding:12px 14px;font-size:12px;text-align:right}
 td:first-child{text-align:left}td:nth-child(2){text-align:left}
 .sym-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,255,0.07);border:1px solid rgba(0,229,255,0.18);border-radius:3px;padding:2px 7px;font-weight:bold;color:var(--accent)}
 .pbid{color:var(--pos)}.pask{color:var(--neg)}
-.gap-cell{font-weight:bold}.gp{color:var(--pos)}.gn{color:var(--neg)}
+.gap-cell{font-weight:bold}
+.profit-cell{background:rgba(255,171,0,0.06)}.gp{color:var(--pos)}.gn{color:var(--neg)}
 
 .footer{margin-top:20px;padding:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--dim)}
 
@@ -95,6 +115,37 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
 .alert-badge{padding:3px 12px;border-radius:3px;font-size:10px;letter-spacing:2px;font-weight:bold;text-transform:uppercase}
 .alert-badge.on{background:rgba(255,23,68,.15);border:1px solid rgba(255,23,68,.5);color:var(--neg);animation:pulse 1s ease-in-out infinite}
 .alert-badge.off{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--pos)}
+/* 強力買進紀錄 */
+.signal-log{border-color:rgba(255,107,53,.3);border-left:3px solid #ff6b35}
+.signal-log .tbl-title{color:#ff6b35}
+.signal-log.single{border-color:rgba(0,229,255,.25);border-left:3px solid #00e5ff}
+.signal-log.single .tbl-title{color:#00e5ff}
+.log-filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border)}
+.log-filters .ctrl-lbl{margin:0}
+/* 套利模擬交易 */
+.paper-panel{border-color:rgba(0,230,118,.25);border-left:3px solid #00e676}
+.paper-panel .tbl-title{color:#00e676}
+.paper-cards{display:flex;flex-wrap:wrap;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.paper-card{display:flex;flex-direction:column;gap:4px;min-width:130px;padding:10px 14px;border:1px solid var(--border);border-radius:4px;background:rgba(255,255,255,.02)}
+.paper-card.wide{min-width:220px}
+.paper-card .lbl{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase}
+.paper-card .val{font-size:20px;font-weight:bold;font-family:var(--display)}
+.paper-card .sub{font-size:10px;color:var(--dim)}
+.trigger-note{padding:10px 18px;font-size:10px;color:var(--dim);line-height:1.6;border-bottom:1px solid var(--border)}
+.trigger-table td{font-size:11px;vertical-align:top}
+.trigger-table th{line-height:1.4}
+.trigger-table td{text-align:left;line-height:1.7}
+.tg-dim{color:var(--dim);font-size:10px}
+.tg-lbl{display:inline-block;min-width:56px;color:var(--dim);font-size:10px}
+.tg-leg{white-space:nowrap}
+.tg-time{white-space:nowrap;font-size:11px}
+.tg-rules{font-size:10px;white-space:nowrap}
+.row-ct{font-size:11px;color:var(--dim)}
+/* Open Gap 買進訊號 */
+.alert-badge.signal{font-size:12px;padding:6px 14px;min-width:92px;text-align:center}
+.alert-badge.hold{background:rgba(90,112,144,.12);border:1px solid rgba(90,112,144,.4);color:var(--dim)}
+.alert-badge.buy{background:rgba(0,230,118,.15);border:1px solid rgba(0,230,118,.6);color:var(--pos)}
+.alert-badge.strong{background:rgba(255,171,0,.2);border:1px solid #ffab00;color:#ffab00;box-shadow:0 0 14px rgba(255,171,0,.35);animation:pulse 1s ease-in-out infinite}
 .spread-metrics{display:flex;gap:36px;flex-wrap:wrap;align-items:flex-end}
 .spread-metric{display:flex;flex-direction:column;gap:4px}
 .spread-metric-lbl{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase}
@@ -114,16 +165,21 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
 <body>
 <div id="app">
   <div class="hdr">
-    <div class="logo">{{ currentExchangeName }} <span class="ex">Market</span> Monitor</div>
+    <div class="logo">{{ activeTab === 'single' ? currentExchangeName : 'Multi-Exchange' }} <span class="ex">Market</span> Monitor</div>
     <div class="hdr-right">
       <div class="status-badge" :class="dbStatus">{{ dbStatusText }}</div>
       <div class="live"><div class="dot" :class="{err:dbStatus==='err'}"></div>LIVE {{ currentTime }}</div>
     </div>
   </div>
 
+  <div class="tabs">
+    <button v-for="t in TABS" :key="t.id" class="tab-btn" :class="{on: activeTab === t.id}"
+            :style="{'--tab-color': t.color}" @click="setTab(t.id)">{{ t.label }}</button>
+  </div>
+
   <div class="ctrl-panel">
     <!-- Single Exchange Settings -->
-    <div class="ctrl-group">
+    <div class="ctrl-group" v-show="activeTab === 'single'">
       <span class="ctrl-lbl">單一交易所設定</span>
       <div style="display:flex; gap:10px;">
         <div class="sel-wrap">
@@ -141,7 +197,7 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
     </div>
 
     <!-- Multi-Exchange Sync Settings -->
-    <div class="ctrl-group section-multi">
+    <div class="ctrl-group section-multi" v-show="activeTab === 'multi'">
       <span class="ctrl-lbl">多交易所同步 (現貨賣價)</span>
       <div style="display:flex; gap:12px;">
         <div class="multi-box">
@@ -159,6 +215,7 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
             </select>
             <button class="btn-action" @click="addMultiExchange">ADD</button>
             <button class="btn-action" @click="multiExchanges=[]">CLEAR</button>
+            <button class="btn-action" @click="selectAllMultiExchanges">ALL</button>
           </div>
         </div>
         <div style="display:flex; flex-direction:column; gap:6px;">
@@ -172,7 +229,7 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
 
     
     <!-- Cross-Exchange Arbitrage Settings -->
-    <div class="ctrl-group section-arb">
+    <div class="ctrl-group section-arb" v-show="activeTab === 'cross'">
       <span class="ctrl-lbl">跨交易所價差 (套利對)</span>
       <div style="display:flex; gap:10px; align-items:center;">
         <div class="sel-wrap">
@@ -197,27 +254,27 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
       <span class="ctrl-lbl">全局設定 / 搜尋</span>
       <div style="display:flex; gap:10px; align-items:center;">
         <div class="tgl">
-          <button v-for="m in fetchMinutes" :key="m.v" class="tgl-btn" :class="{on:fetchMin===m.v}" @click="fetchMin=m.v; fetchData(); fetchMultiData();">{{ m.l }}</button>
+          <button v-for="m in fetchMinutes" :key="m.v" class="tgl-btn" :class="{on:fetchMin===m.v}" @click="fetchMin=m.v; refresh();">{{ m.l }}</button>
         </div>
-        <input class="srch" v-model="searchText" placeholder="搜尋幣種..."/>
-        <button class="btn-action" @click="fetchData(); fetchMultiData();" style="color:var(--accent); font-weight:bold; padding:8px 12px;">手動更新</button>
+        <input class="srch" v-model="searchText" placeholder="搜尋幣種..." v-show="activeTab === 'single'"/>
+        <button class="btn-action" @click="refresh()" style="color:var(--accent); font-weight:bold; padding:8px 12px;">手動更新</button>
       </div>
     </div>
 
     <!-- Cross-Exchange Gap Alert (套利對警報) -->
-    <div class="ctrl-group section-arb" v-show="crossGapAlert" style="min-width:260px;">
+    <div class="ctrl-group section-arb" v-show="activeTab === 'cross' && crossGapAlert" style="min-width:260px;">
       <span class="ctrl-lbl">跨交易所價差警報</span>
       <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
-        <div class="alert-badge" style="font-size:11px; padding:6px 14px;"
-             :class="crossGapAlert && (crossGapAlert.isAlertOpen || crossGapAlert.isAlertClose) ? 'on' : 'off'">
-          {{ crossGapAlert && (crossGapAlert.isAlertOpen || crossGapAlert.isAlertClose) ? '⚠ ALERT' : 'NORMAL' }}
+        <div v-if="crossGapAlert" class="alert-badge signal" :class="crossGapAlert.openSignal"
+             :title="`Open Gap 偏離均值 >${OPEN_SIGNAL.buy}% 買進、>${OPEN_SIGNAL.strongBuy}% 強力買（且現在 Open Gap 需 >${OPEN_SIGNAL.minGap}%）`">
+          {{ SIGNAL_TEXT[crossGapAlert.openSignal] }}
         </div>
         <div v-if="crossGapAlert" style="display:flex; gap:18px;">
           <div style="display:flex; flex-direction:column; gap:2px;">
             <span style="font-size:9px; letter-spacing:1px; color:var(--dim); text-transform:uppercase;">Open Gap</span>
             <span style="font-size:16px; font-weight:bold; font-family:var(--display);"
-                  :style="{color: crossGapAlert.isAlertOpen ? 'var(--neg)' : 'var(--pos)'}">{{ crossGapAlert.curOpen }}%</span>
-            <span style="font-size:9px; color:var(--dim);">均值 {{ crossGapAlert.avgOpen }}%</span>
+                  :style="{color: crossGapAlert.openSignal === 'hold' ? 'var(--text)' : 'var(--pos)'}">{{ crossGapAlert.curOpen }}%</span>
+            <span style="font-size:9px; color:var(--dim);">均值 {{ crossGapAlert.avgOpen }}% · 偏離 {{ crossGapAlert.devOpen > 0 ? '+' : '' }}{{ crossGapAlert.devOpen }}%</span>
           </div>
           <div v-if="crossGapAlert.curClose !== null" style="display:flex; flex-direction:column; gap:2px;">
             <span style="font-size:9px; letter-spacing:1px; color:var(--dim); text-transform:uppercase;">Close Gap</span>
@@ -232,12 +289,16 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
 
   <div class="charts-grid">
     <!-- Chart 1: Gap Trend (Single) -->
-    <div class="chart-wrap" v-show="tableData.length">
+    <div class="chart-wrap" v-show="activeTab === 'single' && tableData.length">
       <div class="chart-hdr">
         <div class="chart-title">Gap Trend Analysis ⚡ {{ currentExchangeName }} ⚡ {{ selectedSymbol }}</div>
         <div class="chart-legend">
-          <span v-for="item in CHART_SERIES.gap" :key="item.label" class="leg-item"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
+          <span v-for="item in CHART_SERIES.gap" :key="item.label" class="leg-item" :class="{off: isHidden('gap', item.label)}" @click="toggleSeries('gap', item.label)"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
         </div>
+      </div>
+      <div class="chart-tools">
+        <button v-if="zoomed.gap" class="btn-resume" @click="resetZoom('gap')">🔍 已縮放（持續更新中）· 重設縮放</button>
+        <span v-else>{{ CHART_HINT }}</span>
       </div>
       <div class="chart-body">
         <canvas ref="chartGapCanvas"></canvas>
@@ -245,12 +306,16 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
     </div>
 
     <!-- Chart 2: Price Trend (Single) -->
-    <div class="chart-wrap" v-show="tableData.length">
+    <div class="chart-wrap" v-show="activeTab === 'single' && tableData.length">
       <div class="chart-hdr">
         <div class="chart-title">Price Trend ⚡ {{ currentExchangeName }} ⚡ {{ selectedSymbol }}</div>
         <div class="chart-legend">
-          <span v-for="item in CHART_SERIES.price" :key="item.label" class="leg-item"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
+          <span v-for="item in CHART_SERIES.price" :key="item.label" class="leg-item" :class="{off: isHidden('price', item.label)}" @click="toggleSeries('price', item.label)"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
         </div>
+      </div>
+      <div class="chart-tools">
+        <button v-if="zoomed.price" class="btn-resume" @click="resetZoom('price')">🔍 已縮放（持續更新中）· 重設縮放</button>
+        <span v-else>{{ CHART_HINT }}</span>
       </div>
       <div class="chart-body">
         <canvas ref="chartPriceCanvas"></canvas>
@@ -259,13 +324,16 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
 
     
     <!-- Chart 4: Cross-Exchange Gap Trend -->
-    <div class="chart-wrap section-arb" v-show="arbExchA && arbExchB">
+    <div class="chart-wrap section-arb" v-show="activeTab === 'cross' && arbExchA && arbExchB">
       <div class="chart-hdr">
         <div class="chart-title">Cross-Exchange Gap Trend ⚡ {{ getExchangeName(arbExchA) }} vs {{ getExchangeName(arbExchB) }} ⚡ {{ multiSymbol }}</div>
         <div class="chart-legend">
-          <span class="leg-item"><span class="leg-dot" style="background:#00e676"></span>Cross Open Gap %</span>
-          <span class="leg-item"><span class="leg-dot" style="background:#ff6b35"></span>Cross Close Gap %</span>
+          <span v-for="item in CROSS_SERIES" :key="item.label" class="leg-item" :class="{off: isHidden('cross', item.label)}" @click="toggleSeries('cross', item.label)"><span class="leg-dot" :style="{background:item.color}"></span>{{ item.label }}</span>
         </div>
+      </div>
+      <div class="chart-tools">
+        <button v-if="zoomed.cross" class="btn-resume" @click="resetZoom('cross')">🔍 已縮放（持續更新中）· 重設縮放</button>
+        <span v-else>{{ CHART_HINT }}</span>
       </div>
       <div class="chart-body">
         <canvas ref="chartCrossCanvas"></canvas>
@@ -273,22 +341,39 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
     </div>
 
     <!-- Chart 3: Multi-Exchange Price Sync (Multi) -->
-    <div class="chart-wrap section-multi" v-show="multiExchanges.length">
+    <div class="chart-wrap section-multi" v-show="activeTab === 'multi' && multiExchanges.length">
       <div class="chart-hdr">
         <div class="chart-title">Multi-Exchange Price Sync (Spot Asks) 🌐 {{ multiSymbol }}</div>
         <div class="chart-legend">
-          <span v-for="eid in multiExchanges" :key="eid" class="leg-item"><span class="leg-dot" :style="{background:getExchangeColor(eid)}"></span>{{ getExchangeName(eid) }}</span>
+          <span v-for="eid in multiExchanges" :key="eid" class="leg-item" :class="{off: isHidden('multi', getExchangeName(eid))}" @click="toggleSeries('multi', getExchangeName(eid))"><span class="leg-dot" :style="{background:getExchangeColor(eid)}"></span>{{ getExchangeName(eid) }}</span>
         </div>
+      </div>
+      <div class="chart-tools">
+        <button v-if="zoomed.multi" class="btn-resume" @click="resetZoom('multi')">🔍 已縮放（持續更新中）· 重設縮放</button>
+        <span v-else>{{ CHART_HINT }}</span>
       </div>
       <div class="chart-body tall">
         <canvas ref="chartMultiCanvas"></canvas>
       </div>
     </div>
 
+    <!-- 跨交易所：價差警報 / 強力買進紀錄 以子分頁切換 -->
+    <div v-show="activeTab === 'cross'">
+    <div class="tabs sub-tabs">
+      <button v-for="t in CROSS_SUBTABS" :key="t.id" class="tab-btn" :class="{on: crossSub === t.id}"
+              :style="{'--tab-color': t.color}" @click="setCrossSub(t.id)">{{ t.label }}</button>
+    </div>
+
     <!-- Spread Alert Panel -->
-    <div class="spread-alert-panel" :class="{'alert-on': spreadAlert && spreadAlert.is_alert}" v-show="multiExchanges.length && spreadAlert && !spreadAlert.error">
+    <div class="spread-alert-panel sub-panel" v-show="crossSub === 'spread' && (!spreadAlert || spreadAlert.error)">
+      <div class="spread-alert-title">Cross-Exchange Spread Alert &mdash; {{ multiSymbol }}</div>
+      <div style="color:var(--dim); font-size:12px; padding:18px 0 4px;">
+        {{ spreadAlert ? '資料不足：查詢區間內有此幣種行情的交易所少於 2 家，無法計算價差' : '載入中…' }}
+      </div>
+    </div>
+    <div class="spread-alert-panel sub-panel" :class="{'alert-on': spreadAlert && spreadAlert.is_alert}" v-show="crossSub === 'spread' && spreadAlert && !spreadAlert.error">
       <div class="spread-alert-hdr">
-        <div class="spread-alert-title">Cross-Exchange Spread Alert &mdash; {{ multiSymbol }}</div>
+        <div class="spread-alert-title">Cross-Exchange Spread Alert &mdash; {{ multiSymbol }} &middot; {{ sortedAsks.length }}/{{ exchanges.length }} exchanges</div>
         <div class="alert-badge" :class="spreadAlert && spreadAlert.is_alert ? 'on' : 'off'">
           {{ spreadAlert && spreadAlert.is_alert ? '⚠ ALERT: ABOVE AVG' : 'NORMAL' }}
         </div>
@@ -314,7 +399,7 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
         </div>
       </div>
       <div class="spread-asks" v-if="spreadAlert && spreadAlert.latest_asks">
-        <div v-for="(ask, eid) in spreadAlert.latest_asks" :key="eid" class="ask-item"
+        <div v-for="[eid, ask] in sortedAsks" :key="eid" class="ask-item"
              :class="{highest: eid === spreadAlert.highest_ask_exchange, lowest: eid === spreadAlert.lowest_ask_exchange}">
           <span class="ask-exch">{{ getExchangeName(eid) }}</span>
           <span class="ask-price" :style="{color: getExchangeColor(eid)}">{{ fmt(ask) }}</span>
@@ -322,9 +407,22 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
         </div>
       </div>
     </div>
+    <!-- 跨交易所強力買進紀錄（子分頁） -->
+    <signal-log scope="cross" class="sub-panel" v-show="crossSub === 'signals'"
+                :active="activeTab === 'cross' && crossSub === 'signals'" :exchanges="exchanges"></signal-log>
+    <!-- 跨交易所模擬交易（子分頁） -->
+    <paper-trades scope="cross" class="sub-panel" v-show="crossSub === 'paper'"
+                  :active="activeTab === 'cross' && crossSub === 'paper'" :exchanges="exchanges"></paper-trades>
+    </div>
   </div>
 
-  <div class="tbl-wrap">
+  <!-- 單一交易所：表格以子分頁切換 -->
+  <div class="tabs sub-tabs" v-show="activeTab === 'single'">
+    <button v-for="t in SINGLE_SUBTABS" :key="t.id" class="tab-btn" :class="{on: singleSub === t.id}"
+            :style="{'--tab-color': t.color}" @click="singleSub = t.id">{{ t.label }}</button>
+  </div>
+
+  <div class="tbl-wrap sub-panel" v-show="activeTab === 'single' && singleSub === 'market'">
     <div class="tbl-hdr">
       <div class="tbl-title">Market Data Table ⚡ dbo.{{ currentTableName }}</div>
       <div class="row-ct">{{ filteredRows.length }} rows displayed</div>
@@ -337,6 +435,7 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
           <th>Spot Bid</th><th>Spot Ask</th><th>Contract Bid</th><th>Contract Ask</th>
           <th @click="sortBy('Open_position_Gap')">Open Gap %</th>
           <th @click="sortBy('Close_position_Gap')">Close Gap %</th>
+          <th @click="sortBy('Profit_Space')" title="Open Gap + Close Gap">獲利空間 % {{ si('Profit_Space') }}</th>
           <th @click="sortBy('Open_position_Gap2nd')">Open Gap2 %</th>
           <th @click="sortBy('Close_position_Gap2nd')">Close Gap2 %</th>
         </tr>
@@ -351,6 +450,7 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
           <td class="pask">{{ fmt(row.Contract_asks) }}</td>
           <td class="gap-cell" :class="gapClass(row.Open_position_Gap)">{{ fmtGap(row.Open_position_Gap) }}</td>
           <td class="gap-cell" :class="gapClass(row.Close_position_Gap)">{{ fmtGap(row.Close_position_Gap) }}</td>
+          <td class="gap-cell profit-cell" :class="gapClass(row.Profit_Space)">{{ fmtGap(row.Profit_Space) }}</td>
           <td class="gap-cell" :class="gapClass(row.Open_position_Gap2nd)">{{ fmtGap(row.Open_position_Gap2nd) }}</td>
           <td class="gap-cell" :class="gapClass(row.Close_position_Gap2nd)">{{ fmtGap(row.Close_position_Gap2nd) }}</td>
         </tr>
@@ -362,6 +462,14 @@ td:first-child{text-align:left}td:nth-child(2){text-align:left}
       <button class="btn-action" @click="currentPage++" :disabled="currentPage===totalPages">NEXT</button>
     </div>
   </div>
+
+  <!-- 單一交易所模擬交易（子分頁） -->
+  <paper-trades scope="single" class="sub-panel" v-show="activeTab === 'single' && singleSub === 'paper'"
+                :active="activeTab === 'single' && singleSub === 'paper'" :exchanges="exchanges"></paper-trades>
+
+  <!-- 單一交易所強力買進紀錄（子分頁） -->
+  <signal-log scope="single" class="sub-panel" v-show="activeTab === 'single' && singleSub === 'signals'"
+              :active="activeTab === 'single' && singleSub === 'signals'" :exchanges="exchanges"></signal-log>
 
   <div class="footer">
     <span>DATABASE: Crypto | TABLE: dbo.{{ currentTableName }} | API: FastAPI</span>
@@ -384,10 +492,465 @@ const CHART_SERIES = {
     {key:'Contract_asks',label:'Contract Ask',color:'#ffab00',backgroundColor:'transparent',fill:false}
   ]
 };
-const EXCHANGE_COLORS = { bybit:'#00e5ff', binance:'#f3ba2f', okx:'#ffffff', mexc:'#00c2a8', gate:'#e91e8c' };
+const EXCHANGE_COLORS = {
+  bybit:'#00e5ff', binance:'#f3ba2f', okx:'#ffffff', mexc:'#00c2a8', gate:'#e91e8c',
+  bitget:'#1da2b4', kucoin:'#24ae8f', htx:'#2d7cf6', bingx:'#6f8cff', cryptocom:'#8fa8ff',
+  kraken:'#7a5cff', coinbase:'#0052ff', bitfinex:'#16b157', whitebit:'#c9d1d9', xt:'#ff8c42',
+  phemex:'#ffd166', poloniex:'#9be564', deepcoin:'#ff5c8a', toobit:'#b07cff', pionex:'#ff6b35',
+};
+const CROSS_SERIES = [
+  {label:'Cross Open Gap %', color:'#00e676', backgroundColor:'rgba(0,230,118,0.07)'},
+  {label:'Cross Close Gap %', color:'#ff6b35', backgroundColor:'rgba(255,107,53,0.07)'},
+];
+// 跨交易所 Open Gap 訊號門檻（偏離 = 現值 − 均值，單位：百分點）
+//   0.1% < 偏離 ≤ 0.5% → 買進；偏離 > 0.5% → 強力買
+//   兩者都必須「現在的 Open Gap > 0.2%」：價差只是從很負回升、實際做了會虧的不算
+//   （與背景服務 signal-detector 的 STRONG_BUY_DEV / MIN_OPEN_GAP 相同）
+const OPEN_SIGNAL = { buy: 0.1, strongBuy: 0.5, minGap: 0.2 };
+// 強力買紀錄篩選級距：0.5%、1%、1.5% … 10%
+const DEVIATION_LEVELS = Array.from({length: 20}, (_, i) => (i + 1) * 0.5);
+const SIGNAL_TEXT ={ strong: '🔥 強力買', buy: '▲ 買進', hold: '觀望' };
+const CHART_HINT ='滾輪縮放 · 拖曳平移 · Shift+拖曳框選 · 雙擊重設 · 點圖例顯示/隱藏';
+const TABS = [
+  {id:'single', label:'單一交易所', color:'#00e5ff'},
+  {id:'multi',  label:'多交易所',   color:'#00bfa5'},
+  {id:'cross',  label:'跨交易所',   color:'#ff6b35'},
+];
+const SINGLE_SUBTABS = [
+  {id:'market',  label:'市場資料',     color:'#00e5ff'},
+  {id:'signals', label:'🔥 強力買進紀錄', color:'#ffab00'},
+  {id:'paper',   label:'💹 模擬交易',   color:'#00e676'},
+];
+const CROSS_SUBTABS = [
+  {id:'spread',  label:'價差警報 Spread Alert', color:'#ff6b35'},
+  {id:'signals', label:'🔥 強力買進紀錄',       color:'#ffab00'},
+  {id:'paper',   label:'💹 模擬交易',          color:'#00e676'},
+];
 let _uid = 0;
 
-createApp({
+// ==================================================================
+// 強力買進紀錄表（單一交易所 / 跨交易所共用）
+//   scope="single"：同一家交易所現貨買 → 自家合約賣（BaseExchange = TargetExchange）
+//   scope="cross" ：跨交易所（BaseExchange ≠ TargetExchange）
+//   資料由背景服務 signal-detector 寫入，這裡只負責篩選與顯示
+// ==================================================================
+const OPEN_GAP_LEVELS = [0, ...DEVIATION_LEVELS];   // 0 = 全部（紀錄本身都已 > 0.2%）
+// 偏離的均值區間（分鐘），與背景服務 signal-detector 的 WINDOWS 相同
+const WINDOW_OPTIONS = [5, 15, 30, 60, 240, 720, 1440];
+const windowLabel = m => m >= 60 ? `${m / 60} 小時` : `${m} 分鐘`;
+const windowShort = m => m >= 60 ? `${m / 60}h` : `${m}m`;
+// 價格最多顯示 8 位小數：Trigger 的 raw data 要與資料表原值完全一致，低價幣（如 DOGE 0.09289）也不失真
+const logNum = v => v == null ? '--' : parseFloat(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 8});
+const logPct = v => v == null ? '--' : (v >= 0 ? '+' : '') + parseFloat(v).toFixed(4) + '%';
+const logPctClass = v => v > 0 ? 'gp' : v < 0 ? 'gn' : '';
+
+const SignalLog = {
+  props: { scope: {type: String, required: true}, active: Boolean, exchanges: {type: Array, default: () => []} },
+  setup(props) {
+    const rows = ref([]), symbols = ref([]);
+    const exchange = ref(''), minOpenGap = ref(0), minDeviation = ref(DEVIATION_LEVELS[0]), symbol = ref('');
+    const windowMin = ref(WINDOW_OPTIONS[0]);   // 偏離的均值區間
+    const isSingle = computed(() => props.scope === 'single');
+    const symbolTotal = computed(() => symbols.value.reduce((n, s) => n + s.count, 0));
+    const exName = id => (props.exchanges.find(e => e.id === id) || {name: id}).name;
+    const exColor = id => EXCHANGE_COLORS[id] || '#5a7090';
+    const hasFilter = computed(() => exchange.value || minOpenGap.value > 0 || minDeviation.value > DEVIATION_LEVELS[0] || symbol.value);
+
+    async function load() {
+      const p = new URLSearchParams({scope: props.scope, min_deviation: minDeviation.value, window_minutes: windowMin.value});
+      if(minOpenGap.value > 0) p.append('min_open_gap', minOpenGap.value);
+      if(exchange.value) p.append('exchange', exchange.value);
+      const forSymbols = new URLSearchParams(p);   // 幣種筆數：套用其他篩選，但不含幣種本身
+      if(symbol.value) p.append('symbol', symbol.value);
+      p.append('limit', 100);
+      try {
+        const [r, rs] = await Promise.all([fetch(`/api/signals?${p}`), fetch(`/api/signals/symbols?${forSymbols}`)]);
+        const [j, js] = await Promise.all([r.json(), rs.json()]);
+        if(j.success) rows.value = j.data;
+        if(js.success) symbols.value = js.symbols;
+      } catch(e) {}
+    }
+
+    // 所在分頁顯示時才同步：立刻載入一次，之後每 10 秒一次
+    let timer = null;
+    watch(() => props.active, on => {
+      clearInterval(timer);
+      if(on) { load(); timer = setInterval(load, 10000); }
+    }, {immediate: true});
+    onUnmounted(() => clearInterval(timer));
+
+    return { rows, symbols, symbolTotal, exchange, minOpenGap, minDeviation, symbol, windowMin, isSingle, hasFilter, load,
+             exName, exColor, logNum, logPct, logPctClass, OPEN_SIGNAL, OPEN_GAP_LEVELS, DEVIATION_LEVELS,
+             WINDOW_OPTIONS, windowLabel, windowShort };
+  },
+  template: `
+    <div class="tbl-wrap signal-log" :class="scope">
+      <div class="tbl-hdr">
+        <div class="tbl-title">
+          🔥 {{ isSingle ? '單一交易所強力買進紀錄 · 同一家現貨買 → 自家合約賣' : '跨交易所強力買進紀錄 · 全部交易所對' }}
+          · 偏離 {{ windowLabel(windowMin) }}均值 &gt; {{ OPEN_SIGNAL.strongBuy }}% 且 Open Gap &gt; {{ OPEN_SIGNAL.minGap }}% 且可套利金額 ≥ $1,000 且獲利空間 ≥ -0.3% 且兩邊買賣價差各 ≤ 0.1%
+        </div>
+      </div>
+      <div class="log-filters">
+        <span class="ctrl-lbl">均值區間</span>
+        <select v-model.number="windowMin" @change="load" style="min-width:110px;">
+          <option v-for="w in WINDOW_OPTIONS" :key="w" :value="w">{{ windowLabel(w) }}</option>
+        </select>
+        <span class="ctrl-lbl">交易所</span>
+        <select v-model="exchange" @change="load" style="min-width:130px;">
+          <option value="">全部交易所</option>
+          <option v-for="e in exchanges" :key="e.id" :value="e.id">{{ e.name }}</option>
+        </select>
+        <span class="ctrl-lbl">Open Gap</span>
+        <select v-model.number="minOpenGap" @change="load" style="min-width:110px;">
+          <option v-for="v in OPEN_GAP_LEVELS" :key="v" :value="v">{{ v === 0 ? '全部' : v + '% 以上' }}</option>
+        </select>
+        <span class="ctrl-lbl">偏離級距</span>
+        <select v-model.number="minDeviation" @change="load" style="min-width:110px;">
+          <option v-for="v in DEVIATION_LEVELS" :key="v" :value="v">{{ v }}% 以上</option>
+        </select>
+        <span class="ctrl-lbl">幣種</span>
+        <select v-model="symbol" @change="load" style="min-width:150px;">
+          <option value="">全部幣種（{{ symbolTotal }}）</option>
+          <option v-for="s in symbols" :key="s.symbol" :value="s.symbol">{{ s.symbol }}（{{ s.count }}）</option>
+          <option v-if="symbol && !symbols.some(s => s.symbol === symbol)" :value="symbol">{{ symbol }}（0）</option>
+        </select>
+        <span class="row-ct">{{ rows.length }} 筆（最新 100 筆）</span>
+        <button class="btn-action" @click="load">重新整理</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>偵測時間</th><th>幣種</th><th>{{ isSingle ? '交易所' : '現貨買 → 合約賣' }}</th>
+            <th>Open Gap %</th><th>均值 %</th><th>偏離 %</th>
+            <th>現貨 Ask</th><th>合約 Bid</th>
+            <th title="偵測當下查即時訂單簿，在 Open Gap 仍 > 0.2% 的前提下可成交的金額">可套利金額</th>
+            <th title="偵測當下即時訂單簿的 Open Gap + Close Gap ≈ −(現貨買賣價差 + 合約買賣價差)，即平倉時要付出的價差成本">獲利空間</th>
+            <th title="偵測當下即時訂單簿：現貨 (Ask − Bid) / Bid、合約 (Ask − Bid) / Bid；任一邊 > 0.1% 不開倉">買賣價差<br>現貨 / 合約</th>
+            <th>均值區間</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="s in rows" :key="s.Id">
+            <td style="color:var(--dim); font-size:11px;">{{ s.DetectedAt }}</td>
+            <td><span class="sym-badge">{{ s.Symbol }}</span></td>
+            <td style="text-align:left;">
+              <span :style="{color: exColor(s.BaseExchange)}">{{ exName(s.BaseExchange) }}</span>
+              <template v-if="!isSingle">
+                <span style="color:var(--dim);"> → </span>
+                <span :style="{color: exColor(s.TargetExchange)}">{{ exName(s.TargetExchange) }}</span>
+              </template>
+            </td>
+            <td class="gap-cell" :class="logPctClass(s.OpenGap)">{{ logPct(s.OpenGap) }}</td>
+            <td style="color:var(--dim);">{{ logPct(s.AvgOpenGap) }}</td>
+            <td class="gap-cell" style="color:#ffab00;">{{ logPct(s.Deviation) }}</td>
+            <td class="pask">{{ logNum(s.BaseSpotAsk) }}</td>
+            <td class="pbid">{{ logNum(s.TargetContractBid) }}</td>
+            <td :style="{color: s.CapacityUsd == null ? 'var(--dim)' : 'var(--text)', fontWeight: 'bold'}"
+                :title="s.CapacityUsd == null ? '舊紀錄（加入掛單過濾前），未查訂單簿' : '約 ' + s.CapacityQty + ' 顆'">
+              {{ s.CapacityUsd == null ? '—' : '$' + Math.round(s.CapacityUsd).toLocaleString('en-US') }}
+            </td>
+            <td :class="logPctClass(s.RoundTripPct)" :title="s.RoundTripPct == null ? '舊紀錄（加入獲利空間過濾前）' : ''">
+              {{ s.RoundTripPct == null ? '—' : logPct(s.RoundTripPct) }}
+            </td>
+            <td :title="s.SpotSpreadPct == null ? '舊紀錄（加入兩邊價差規則前）' : ''">
+              <span :class="s.SpotSpreadPct > 0.1 ? 'gn' : ''">{{ s.SpotSpreadPct == null ? '—' : s.SpotSpreadPct.toFixed(4) + '%' }}</span>
+              /
+              <span :class="s.ContractSpreadPct > 0.1 ? 'gn' : ''">{{ s.ContractSpreadPct == null ? '—' : s.ContractSpreadPct.toFixed(4) + '%' }}</span>
+            </td>
+            <td style="color:var(--dim);">{{ windowShort(s.WindowMinutes) }}</td>
+          </tr>
+          <tr v-if="!rows.length">
+            <td colspan="12" style="text-align:center; color:var(--dim); padding:24px;">
+              {{ hasFilter ? '沒有符合篩選條件的紀錄' : '尚無強力買紀錄（背景服務 signal-detector 偵測到時會自動寫入）' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`,
+};
+
+// ==================================================================
+// 套利模擬交易（單一交易所 / 跨交易所共用）
+//   背景服務 signal-detector 在每筆強力買訊號時開倉（用盡可套利金額、即時訂單簿逐檔成交），
+//   扣手續費後 >= +0.1% 或 Open Gap 回到開倉時均值即平倉。這裡只負責顯示。
+// ==================================================================
+const fmtUsd = v => v == null ? '--' : (v >= 0 ? '+' : '−') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmtCost = v => v == null ? '--' : '$' + Math.round(v).toLocaleString('en-US');
+const fmtHold = s => {
+  if(s == null) return '--';
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = Math.round(s % 60);
+  return h ? `${h}h ${m}m` : m ? `${m}m ${sec}s` : `${sec}s`;
+};
+const EXIT_REASON_TEXT = { TAKE_PROFIT: '停利', MEAN_REVERT: '均值回歸' };
+// 進場規則（與背景服務 signal-detector 相同），Trigger 檢視逐條檢核
+const ENTRY_RULES = { deviation: 0.5, openGap: 0.2, capacity: 1000, roundTrip: -0.3, spotSpread: 0.1, contractSpread: 0.1 };
+
+const PaperTrades = {
+  props: { scope: {type: String, required: true}, active: Boolean, exchanges: {type: Array, default: () => []} },
+  setup(props) {
+    const summary = ref(null), openRows = ref([]), closedRows = ref([]), triggerRows = ref([]);
+    const view = ref('open'), exchange = ref('');
+    const isSingle = computed(() => props.scope === 'single');
+    const exName = id => (props.exchanges.find(e => e.id === id) || {name: id}).name;
+    const exColor = id => EXCHANGE_COLORS[id] || '#5a7090';
+
+    async function load() {
+      const p = new URLSearchParams({scope: props.scope});
+      if(exchange.value) p.append('exchange', exchange.value);
+      try {
+        const [rs, ro, rc] = await Promise.all([
+          fetch(`/api/paper/summary?${p}`),
+          fetch(`/api/paper/trades?status=open&limit=200&${p}`),
+          fetch(`/api/paper/trades?status=closed&limit=100&${p}`),
+        ]);
+        const [js, jo, jc] = await Promise.all([rs.json(), ro.json(), rc.json()]);
+        if(js.success) summary.value = js.summary;
+        if(jo.success) openRows.value = jo.data;
+        if(jc.success) closedRows.value = jc.data;
+        // Trigger：每筆交易要回原始資料表查 raw data，只在 Trigger 檢視時才查
+        if(view.value === 'trigger') {
+          const jt = await (await fetch(`/api/paper/triggers?limit=100&${p}`)).json();
+          if(jt.success) triggerRows.value = jt.data;
+        }
+      } catch(e) {}
+    }
+    watch(view, v => { if(v === 'trigger') load(); });
+
+    // 進場規則檢核：true ✓、false ✗、null 未檢查（舊規則的紀錄）
+    const rule = (value, ok) => value == null ? null : ok;
+    function checks(t) {
+      return {
+        raw: t.RawOpenGap == null || t.OpenGap == null ? null : Math.abs(t.RawOpenGap - t.OpenGap) < 0.0005,
+        deviation: rule(t.Deviation, t.Deviation > ENTRY_RULES.deviation),
+        openGap: rule(t.OpenGap, t.OpenGap > ENTRY_RULES.openGap),
+        capacity: rule(t.CapacityUsd, t.CapacityUsd >= ENTRY_RULES.capacity),
+        roundTrip: rule(t.RoundTripPct, t.RoundTripPct >= ENTRY_RULES.roundTrip),
+        spotSpread: rule(t.SpotSpreadPct, t.SpotSpreadPct <= ENTRY_RULES.spotSpread),
+        contractSpread: rule(t.ContractSpreadPct, t.ContractSpreadPct <= ENTRY_RULES.contractSpread),
+      };
+    }
+    const mark = ok => ok == null ? '—' : ok ? '✓' : '✗';
+    const markClass = ok => ok == null ? '' : ok ? 'gp' : 'gn';
+
+    // 落差（滑價）：正值 = 對你不利（買貴 / 賣便宜）。參考價優先用 raw data，查無時用訊號記錄的價格
+    const toDate = s => s ? new Date(s.replace(' ', 'T')) : null;
+    const pctOf = (diff, ref) => diff == null || !ref ? null : diff / ref * 100;
+    function slip(t) {
+      const refSpotAsk = t.RawBase?.SpotAsk ?? t.BaseSpotAsk, refSpotBid = t.RawBase?.SpotBid ?? null;
+      const refCtrBid = t.RawTarget?.ContractBid ?? t.TargetContractBid, refCtrAsk = t.RawTarget?.ContractAsk ?? null;
+      const q = t.Qty;
+      const d = (a, b) => a == null || b == null ? null : a - b;
+      // 開倉：買現貨（成交 − 參考 Ask）、放空合約（參考 Bid − 成交）
+      const oS = d(t.EntrySpotPrice, refSpotAsk), oC = d(refCtrBid, t.EntryContractPrice);
+      // 平倉 vs 訊號：賣現貨（訊號 Bid − 成交）、回補合約（成交 − 訊號 Ask）
+      const cSs = d(refSpotBid, t.ExitSpotPrice), cCs = d(t.ExitContractPrice, refCtrAsk);
+      // 平倉 vs 決策當下報價（純執行滑價）
+      const cSd = d(t.ExitRefSpotBid, t.ExitSpotPrice), cCd = d(t.ExitContractPrice, t.ExitRefContractAsk);
+      const usd = (...xs) => xs.some(x => x == null) ? null : xs.reduce((s, x) => s + x * q, 0);
+      const sec = (a, b) => a && b ? (toDate(b) - toDate(a)) / 1000 : null;
+      return {
+        refSpotAsk, refSpotBid, refCtrBid, refCtrAsk,
+        openSpotPct: pctOf(oS, refSpotAsk), openCtrPct: pctOf(oC, refCtrBid), openUsd: usd(oS, oC),
+        closeSpotSigPct: pctOf(cSs, refSpotBid), closeCtrSigPct: pctOf(cCs, refCtrAsk), closeSigUsd: usd(cSs, cCs),
+        closeSpotDecPct: pctOf(cSd, t.ExitRefSpotBid), closeCtrDecPct: pctOf(cCd, t.ExitRefContractAsk), closeDecUsd: usd(cSd, cCd),
+        openDelay: sec(t.DataTime, t.OpenedAt), holdSec: sec(t.OpenedAt, t.ClosedAt), execSec: sec(t.ExitDecidedAt, t.ClosedAt),
+      };
+    }
+    const fmtSlip = v => v == null ? '—' : (v > 0 ? '不利 +' : v < 0 ? '有利 ' : '') + v.toFixed(4) + '%';
+    const fmtSlipUsd = v => v == null ? '—' : (v > 0 ? '−' : v < 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const slipClass = v => v == null ? 'tg-dim' : v > 0 ? 'gn' : v < 0 ? 'gp' : '';
+    const fmtGapSec = s => s == null ? '' : '(+' + fmtHold(Math.max(0, s)) + ')';
+
+    // 所在子分頁顯示時：立刻載入，之後每 5 秒更新（持倉估值每 10 秒由背景服務寫回）
+    let timer = null;
+    watch(() => props.active, on => {
+      clearInterval(timer);
+      if(on) { load(); timer = setInterval(load, 5000); }
+    }, {immediate: true});
+    onUnmounted(() => clearInterval(timer));
+
+    return { summary, openRows, closedRows, triggerRows, view, exchange, isSingle, load, exName, exColor,
+             fmtUsd, fmtCost, fmtHold, logNum, logPct, logPctClass, EXIT_REASON_TEXT, ENTRY_RULES,
+             checks, mark, markClass, windowShort, slip, fmtSlip, fmtSlipUsd, slipClass, fmtGapSec };
+  },
+  template: `
+    <div class="tbl-wrap paper-panel">
+      <div class="tbl-hdr">
+        <div class="tbl-title">💹 {{ isSingle ? '單一交易所' : '跨交易所' }}套利模擬交易 · 跟隨 5 分鐘均值的強力買訊號、用盡可套利金額開倉 · 扣手續費（現貨 0.1%、合約 0.05%）後 ≥ +0.1% 或 Open Gap 回到開倉時均值即平倉</div>
+      </div>
+      <div class="paper-cards" v-if="summary">
+        <div class="paper-card"><span class="lbl">持倉中</span><span class="val">{{ summary.OpenCount }}</span><span class="sub">成本 {{ fmtCost(summary.OpenCostUsd) }}</span></div>
+        <div class="paper-card"><span class="lbl">未實現損益</span><span class="val" :class="logPctClass(summary.UnrealizedPnl)">{{ fmtUsd(summary.UnrealizedPnl) }}</span><span class="sub">以最新報價估算</span></div>
+        <div class="paper-card"><span class="lbl">已平倉</span><span class="val">{{ summary.ClosedCount }}</span><span class="sub">停利 {{ summary.TakeProfitCount }} · 均值回歸 {{ summary.MeanRevertCount }}</span></div>
+        <div class="paper-card wide"><span class="lbl">已實現淨損益</span><span class="val" :class="logPctClass(summary.RealizedPnl)">{{ fmtUsd(summary.RealizedPnl) }}</span><span class="sub">毛利 {{ fmtUsd(summary.RealizedGross) }} − 手續費 {{ fmtCost(summary.RealizedFees) }}</span></div>
+        <div class="paper-card"><span class="lbl">勝率</span><span class="val">{{ summary.WinRate == null ? '--' : summary.WinRate.toFixed(1) + '%' }}</span><span class="sub">{{ summary.WinCount }} / {{ summary.ClosedCount }} 筆獲利</span></div>
+        <div class="paper-card"><span class="lbl">平均淨報酬</span><span class="val" :class="logPctClass(summary.AvgNetPct)">{{ summary.AvgNetPct == null ? '--' : logPct(summary.AvgNetPct) }}</span><span class="sub">平均持倉 {{ fmtHold(summary.AvgHoldSeconds) }}</span></div>
+      </div>
+      <div class="log-filters">
+        <div class="tgl">
+          <button class="tgl-btn" :class="{on: view === 'open'}" @click="view = 'open'">持倉中 ({{ openRows.length }})</button>
+          <button class="tgl-btn" :class="{on: view === 'closed'}" @click="view = 'closed'">已平倉 ({{ closedRows.length }})</button>
+          <button class="tgl-btn" :class="{on: view === 'trigger'}" @click="view = 'trigger'">Trigger</button>
+        </div>
+        <span class="ctrl-lbl">交易所</span>
+        <select v-model="exchange" @change="load" style="min-width:130px;">
+          <option value="">全部交易所</option>
+          <option v-for="e in exchanges" :key="e.id" :value="e.id">{{ e.name }}</option>
+        </select>
+        <span class="row-ct">每 5 秒更新 · 已平倉顯示最新 100 筆</span>
+        <button class="btn-action" @click="load">重新整理</button>
+      </div>
+
+      <!-- 持倉中 -->
+      <table v-show="view === 'open'">
+        <thead>
+          <tr>
+            <th>開倉時間</th><th>幣種</th><th>{{ isSingle ? '交易所' : '現貨買 → 合約空' }}</th>
+            <th>數量</th><th>成本</th><th>進場 Gap</th><th>現貨買價 → 現 Bid</th><th>合約空價 → 現 Ask</th>
+            <th>未實現損益</th><th>未實現 %</th><th>持倉時間</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="t in openRows" :key="t.Id">
+            <td style="color:var(--dim); font-size:11px;">{{ t.OpenedAt }}</td>
+            <td><span class="sym-badge">{{ t.Symbol }}</span></td>
+            <td style="text-align:left;">
+              <span :style="{color: exColor(t.BaseExchange)}">{{ exName(t.BaseExchange) }}</span>
+              <template v-if="!isSingle"><span style="color:var(--dim);"> → </span><span :style="{color: exColor(t.TargetExchange)}">{{ exName(t.TargetExchange) }}</span></template>
+            </td>
+            <td>{{ t.Qty.toPrecision(6) }}</td>
+            <td>{{ fmtCost(t.CostUsd) }}</td>
+            <td class="gap-cell" :class="logPctClass(t.EntryOpenGap)">{{ logPct(t.EntryOpenGap) }}</td>
+            <td>{{ logNum(t.EntrySpotPrice) }} <span style="color:var(--dim);">→</span> <span class="pbid">{{ logNum(t.MarkSpotBid) }}</span></td>
+            <td>{{ logNum(t.EntryContractPrice) }} <span style="color:var(--dim);">→</span> <span class="pask">{{ logNum(t.MarkContractAsk) }}</span></td>
+            <td class="gap-cell" :class="logPctClass(t.UnrealizedPnl)">{{ fmtUsd(t.UnrealizedPnl) }}</td>
+            <td class="gap-cell" :class="logPctClass(t.UnrealizedPct)">{{ t.UnrealizedPct == null ? '--' : logPct(t.UnrealizedPct) }}</td>
+            <td style="color:var(--dim);">{{ fmtHold(t.HoldSeconds) }}</td>
+          </tr>
+          <tr v-if="!openRows.length"><td colspan="11" style="text-align:center; color:var(--dim); padding:24px;">目前沒有持倉（出現強力買訊號時會自動開倉）</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 已平倉 -->
+      <table v-show="view === 'closed'">
+        <thead>
+          <tr>
+            <th>開倉時間</th><th>平倉時間</th><th>幣種</th><th>{{ isSingle ? '交易所' : '現貨買 → 合約空' }}</th>
+            <th>數量</th><th>成本</th><th>現貨 買 → 賣</th><th>合約 空 → 回補</th>
+            <th>毛利</th><th>手續費</th><th>淨損益</th><th>淨報酬</th><th>持倉時間</th><th>平倉原因</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="t in closedRows" :key="t.Id">
+            <td style="color:var(--dim); font-size:11px;">{{ t.OpenedAt }}</td>
+            <td style="color:var(--dim); font-size:11px;">{{ t.ClosedAt }}</td>
+            <td><span class="sym-badge">{{ t.Symbol }}</span></td>
+            <td style="text-align:left;">
+              <span :style="{color: exColor(t.BaseExchange)}">{{ exName(t.BaseExchange) }}</span>
+              <template v-if="!isSingle"><span style="color:var(--dim);"> → </span><span :style="{color: exColor(t.TargetExchange)}">{{ exName(t.TargetExchange) }}</span></template>
+            </td>
+            <td>{{ t.Qty.toPrecision(6) }}</td>
+            <td>{{ fmtCost(t.CostUsd) }}</td>
+            <td>{{ logNum(t.EntrySpotPrice) }} <span style="color:var(--dim);">→</span> {{ logNum(t.ExitSpotPrice) }}</td>
+            <td>{{ logNum(t.EntryContractPrice) }} <span style="color:var(--dim);">→</span> {{ logNum(t.ExitContractPrice) }}</td>
+            <td :class="logPctClass(t.GrossPnl)">{{ fmtUsd(t.GrossPnl) }}</td>
+            <td style="color:var(--dim);">{{ fmtCost(t.EntryFee + t.ExitFee) }}</td>
+            <td class="gap-cell" :class="logPctClass(t.NetPnl)">{{ fmtUsd(t.NetPnl) }}</td>
+            <td class="gap-cell" :class="logPctClass(t.NetPnlPct)">{{ logPct(t.NetPnlPct) }}</td>
+            <td style="color:var(--dim);">{{ fmtHold(t.HoldSeconds) }}</td>
+            <td :title="t.ExitFillSource === 'BOOK' ? '以即時訂單簿逐檔成交' : '訂單簿查詢失敗，以最新報價成交'">
+              {{ EXIT_REASON_TEXT[t.ExitReason] || t.ExitReason }}<span v-if="t.ExitFillSource === 'QUOTE'" style="color:var(--dim);"> *</span>
+            </td>
+          </tr>
+          <tr v-if="!closedRows.length"><td colspan="14" style="text-align:center; color:var(--dim); padding:24px;">尚無已平倉的模擬交易</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Trigger：每筆交易的觸發依據（強力買訊號 + 訊號那一秒的原始行情 raw data + 實際成交） -->
+      <div v-show="view === 'trigger'" class="trigger-note">
+        進場規則：偏離 &gt; {{ ENTRY_RULES.deviation }}% · Open Gap &gt; {{ ENTRY_RULES.openGap }}% · 可套利金額 ≥ {{ ENTRY_RULES.capacity.toLocaleString() }} USDT · 獲利空間 ≥ {{ ENTRY_RULES.roundTrip }}%
+        · 現貨買賣價差 ≤ {{ ENTRY_RULES.spotSpread }}% · 合約買賣價差 ≤ {{ ENTRY_RULES.contractSpread }}%
+        ｜ 訊號參考價 = 訊號那一秒兩邊交易所資料表的原始行情（raw data）；「Raw 重算」以 raw data 重算 Open Gap 與訊號記錄比對
+        ｜ <b>落差</b>：正值 = 對你不利（買貴 / 賣便宜），金額 = 數量 × 價差；平倉「vs 決策」= 觸發平倉條件那一刻的報價 → 實際成交（純執行滑價）
+      </div>
+      <table v-show="view === 'trigger'" class="trigger-table">
+        <thead>
+          <tr>
+            <th>交易 #</th><th>幣種 / {{ isSingle ? '交易所' : '現貨買 → 合約空' }}</th><th>時間軸</th>
+            <th>現貨端（買入 → 賣出）</th><th>合約端（放空 → 回補）</th>
+            <th>開倉落差<br>訊號 → 開倉</th><th>平倉落差</th>
+            <th>Open Gap / 進場規則</th><th>結果</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="t in triggerRows" :key="t.TradeId">
+            <td>#{{ t.TradeId }}<br><span class="tg-dim">訊號 {{ t.SignalId == null ? '—' : '#' + t.SignalId }} {{ t.WindowMinutes ? windowShort(t.WindowMinutes) : '' }}</span></td>
+            <td style="text-align:left;">
+              <span class="sym-badge">{{ t.Symbol }}</span><br>
+              <span :style="{color: exColor(t.BaseExchange)}">{{ exName(t.BaseExchange) }}</span>
+              <template v-if="!isSingle"><span class="tg-dim"> → </span><span :style="{color: exColor(t.TargetExchange)}">{{ exName(t.TargetExchange) }}</span></template>
+            </td>
+            <td class="tg-time">
+              <div>訊號 {{ t.DataTime ? t.DataTime.slice(5) : '—' }}</div>
+              <div>開倉 {{ t.OpenedAt.slice(5) }} <span class="tg-dim">{{ fmtGapSec(slip(t).openDelay) }}</span></div>
+              <div v-if="t.Status === 'CLOSED'">平倉 {{ t.ClosedAt.slice(5) }} <span class="tg-dim">{{ fmtGapSec(slip(t).holdSec) }}</span></div>
+              <div v-else class="tg-dim">持倉中</div>
+            </td>
+            <td class="tg-leg">
+              <div><span class="tg-lbl">訊號參考</span> Ask <span class="pask">{{ logNum(slip(t).refSpotAsk) }}</span> / Bid <span class="pbid">{{ logNum(slip(t).refSpotBid) }}</span></div>
+              <div><span class="tg-lbl">開倉 買入</span> {{ logNum(t.EntrySpotPrice) }} <span :class="slipClass(slip(t).openSpotPct)">{{ fmtSlip(slip(t).openSpotPct) }}</span></div>
+              <div v-if="t.Status === 'CLOSED'"><span class="tg-lbl">平倉 賣出</span> {{ logNum(t.ExitSpotPrice) }}
+                <span class="tg-dim">vs 訊號 Bid</span> <span :class="slipClass(slip(t).closeSpotSigPct)">{{ fmtSlip(slip(t).closeSpotSigPct) }}</span>
+                <span class="tg-dim">vs 決策 {{ logNum(t.ExitRefSpotBid) }}</span> <span :class="slipClass(slip(t).closeSpotDecPct)">{{ fmtSlip(slip(t).closeSpotDecPct) }}</span>
+              </div>
+            </td>
+            <td class="tg-leg">
+              <div><span class="tg-lbl">訊號參考</span> Bid <span class="pbid">{{ logNum(slip(t).refCtrBid) }}</span> / Ask <span class="pask">{{ logNum(slip(t).refCtrAsk) }}</span></div>
+              <div><span class="tg-lbl">開倉 放空</span> {{ logNum(t.EntryContractPrice) }} <span :class="slipClass(slip(t).openCtrPct)">{{ fmtSlip(slip(t).openCtrPct) }}</span></div>
+              <div v-if="t.Status === 'CLOSED'"><span class="tg-lbl">平倉 回補</span> {{ logNum(t.ExitContractPrice) }}
+                <span class="tg-dim">vs 訊號 Ask</span> <span :class="slipClass(slip(t).closeCtrSigPct)">{{ fmtSlip(slip(t).closeCtrSigPct) }}</span>
+                <span class="tg-dim">vs 決策 {{ logNum(t.ExitRefContractAsk) }}</span> <span :class="slipClass(slip(t).closeCtrDecPct)">{{ fmtSlip(slip(t).closeCtrDecPct) }}</span>
+              </div>
+            </td>
+            <td>
+              <b :class="slipClass(slip(t).openUsd)">{{ fmtSlipUsd(slip(t).openUsd) }}</b><br>
+              <span class="tg-dim">Gap {{ logPct(t.OpenGap) }} → {{ logPct(t.EntryOpenGap) }}</span>
+            </td>
+            <td>
+              <template v-if="t.Status === 'CLOSED'">
+                <div><span class="tg-dim">vs 訊號</span> <b :class="slipClass(slip(t).closeSigUsd)">{{ fmtSlipUsd(slip(t).closeSigUsd) }}</b></div>
+                <div><span class="tg-dim">vs 決策</span> <b :class="slipClass(slip(t).closeDecUsd)">{{ fmtSlipUsd(slip(t).closeDecUsd) }}</b>
+                  <span class="tg-dim">{{ fmtGapSec(slip(t).execSec) }}</span></div>
+              </template>
+              <span v-else class="tg-dim">—</span>
+            </td>
+            <td class="tg-rules">
+              <div>訊號 {{ logPct(t.OpenGap) }} / Raw {{ t.RawOpenGap == null ? '—' : logPct(t.RawOpenGap) }} <b :class="markClass(checks(t).raw)">{{ mark(checks(t).raw) }}</b></div>
+              <div>偏離 {{ logPct(t.Deviation) }} <b :class="markClass(checks(t).deviation)">{{ mark(checks(t).deviation) }}</b>
+                · Gap <b :class="markClass(checks(t).openGap)">{{ mark(checks(t).openGap) }}</b></div>
+              <div>可套利 {{ t.CapacityUsd == null ? '—' : fmtCost(t.CapacityUsd) }} <b :class="markClass(checks(t).capacity)">{{ mark(checks(t).capacity) }}</b></div>
+              <div :title="t.RoundTripPct == null ? '此筆交易在加入獲利空間規則前開倉，未檢查' : ''">獲利空間 {{ t.RoundTripPct == null ? '—' : logPct(t.RoundTripPct) }} <b :class="markClass(checks(t).roundTrip)">{{ mark(checks(t).roundTrip) }}</b></div>
+              <div :title="t.SpotSpreadPct == null ? '此筆交易在加入兩邊價差規則前開倉，未檢查' : '開倉前即時訂單簿：(Ask − Bid) / Bid'">
+                現貨價差 {{ t.SpotSpreadPct == null ? '—' : t.SpotSpreadPct.toFixed(4) + '%' }} <b :class="markClass(checks(t).spotSpread)">{{ mark(checks(t).spotSpread) }}</b>
+                · 合約價差 {{ t.ContractSpreadPct == null ? '—' : t.ContractSpreadPct.toFixed(4) + '%' }} <b :class="markClass(checks(t).contractSpread)">{{ mark(checks(t).contractSpread) }}</b>
+              </div>
+            </td>
+            <td>
+              <template v-if="t.Status === 'CLOSED'">
+                <span :class="logPctClass(t.NetPnl)">{{ fmtUsd(t.NetPnl) }}</span><br>
+                <span class="tg-dim">{{ EXIT_REASON_TEXT[t.ExitReason] || t.ExitReason }}</span>
+              </template>
+              <span v-else class="tg-dim">持倉中</span>
+            </td>
+          </tr>
+          <tr v-if="!triggerRows.length"><td colspan="9" style="text-align:center; color:var(--dim); padding:24px;">尚無模擬交易</td></tr>
+        </tbody>
+      </table>
+    </div>`,
+};
+
+const app = createApp({
   setup(){
     const exchanges = ref([]), currentExchange = ref('bybit');
     const symbols = ref([]), selectedSymbol = ref('BTCUSDT'), searchText = ref('');
@@ -396,9 +959,21 @@ createApp({
     const lastFetch = ref('--'), currentTime = ref('--'), addExchangeId = ref('');
     const sortKey = ref('Time'), sortDir = ref(-1);
     const spreadAlert = ref(null);
+    // 目前分頁記在網址 #single / #multi / #cross，重新整理或分享連結都會停在同一頁
+    const hashTab = location.hash.slice(1);
+    const activeTab = ref(TABS.some(t => t.id === hashTab) ? hashTab : 'single');
+    const singleSub = ref('market');   // 單一交易所的子分頁：market（市場資料）/ signals（強力買進紀錄）
+    const crossSub = ref('spread');    // 跨交易所的子分頁：spread（價差警報）/ signals（強力買進紀錄）
+    function setCrossSub(id) {
+      crossSub.value = id;
+      if(id === 'spread') fetchSpreadAlert();   // 切回價差警報時立刻更新，不等下一秒
+    }
 
     const chartGapCanvas = ref(null), chartPriceCanvas = ref(null), chartMultiCanvas = ref(null), chartCrossCanvas = ref(null);
-    let chartGapInstance = null, chartPriceInstance = null, chartMultiInstance = null, chartCrossInstance = null;
+    // 圖表實例以 key 管理：gap / price（單一）、multi（多交易所）、cross（跨交易所）
+    const charts = {};
+    const hiddenSeries = ref({gap: [], price: [], multi: [], cross: []});   // 圖例點掉的線（以 label 記）
+    const zoomed = ref({gap: false, price: false, multi: false, cross: false}); // 是否處於縮放/平移狀態（資料仍持續更新）
     const arbExchA = ref('binance'), arbExchB = ref('bybit');
 
     let timer = null, tickTimer = null;
@@ -416,6 +991,10 @@ createApp({
         multiExchanges.value.push(addExchangeId.value);
         fetchMultiData();
       }
+    }
+    function selectAllMultiExchanges() {
+      multiExchanges.value = exchanges.value.map(e => e.id);
+      fetchMultiData();
     }
     function removeMultiExchange(eid) {
       multiExchanges.value = multiExchanges.value.filter(e => e !== eid);
@@ -447,7 +1026,12 @@ createApp({
         const r = await fetch(url);
         const j = await r.json();
         if(j.success) {
-          tableData.value = j.data.map(row => ({ ...row, _uid: ++_uid }));
+          tableData.value = j.data.map(row => ({
+            ...row, _uid: ++_uid,
+            // 獲利空間 = Open Gap + Close Gap：同一時間開倉（買現貨、賣合約）再平倉（賣現貨、買合約）的損益（任一缺值則為空）
+            Profit_Space: row.Open_position_Gap == null || row.Close_position_Gap == null
+              ? null : row.Open_position_Gap + row.Close_position_Gap,
+          }));
           dbStatus.value = 'ok'; lastFetch.value = new Date().toLocaleTimeString('zh-TW');
           await nextTick(); updateSingleCharts();
         }
@@ -455,17 +1039,43 @@ createApp({
     }
 
     async function fetchMultiData() {
-      const eids = [...new Set([...multiExchanges.value, arbExchA.value, arbExchB.value])].filter(x => x);
+      // 多交易所分頁只需要清單內的交易所；跨交易所分頁只需要套利對 A / B
+      const wanted = activeTab.value === 'multi' ? multiExchanges.value : [arbExchA.value, arbExchB.value];
+      const eids = [...new Set(wanted)].filter(x => x);
       if(!eids.length || !multiSymbol.value) return;
       try {
         const p = new URLSearchParams();
         eids.forEach(e => p.append('exchange', e));
 
-        p.append('symbol', multiSymbol.value); p.append('minutes', fetchMin.value);
+        const sym = multiSymbol.value;
+        p.append('symbol', sym); p.append('minutes', fetchMin.value);
         const r = await fetch(`/api/multi/data?${p.toString()}`);
         const j = await r.json();
-        if(j.success) { multiData.value = j.data; await nextTick(); updateMultiChart(); updateCrossChart(); }
-      } catch(e) {}
+        if(j.success) {
+          multiData.value = j.data; dbStatus.value = 'ok'; lastFetch.value = new Date().toLocaleTimeString('zh-TW');
+          await nextTick();
+          if(activeTab.value === 'multi') updateMultiChart(); else updateCrossChart();
+        }
+      } catch(e) { dbStatus.value = 'err'; }
+    }
+
+    // 只抓目前分頁需要的資料，避免每秒對 DB 查詢所有區塊
+    function refresh() {
+      if(activeTab.value === 'single') fetchData();
+      else fetchMultiData();
+      // 價差警報一次查 20 家交易所，只在它的子分頁顯示時才每秒查詢
+      if(activeTab.value === 'cross' && crossSub.value === 'spread') fetchSpreadAlert();
+      // 強力買紀錄由 <signal-log> 元件自行每 10 秒同步
+    }
+
+    async function setTab(id) {
+      if(activeTab.value === id) return;
+      activeTab.value = id;
+      history.replaceState(null, '', '#' + id);
+      await nextTick();
+      // 圖表在隱藏時尺寸為 0，切回來時重新計算大小
+      Object.values(charts).forEach(c => c.resize());
+      refresh();
     }
 
     // --- Charts ---
@@ -473,7 +1083,7 @@ createApp({
       const rows = [...tableData.value].sort((a,b) => a.Time > b.Time ? 1 : -1).slice(-150);
       const labels = rows.map(r => r.Time.slice(11,19));
 
-      chartGapInstance = renderLineChart(chartGapCanvas.value, chartGapInstance, {
+      renderLineChart('gap', chartGapCanvas.value, {
         labels,
         datasets: CHART_SERIES.gap.map(s => ({
           label: s.label, borderColor: s.color, backgroundColor: s.backgroundColor, fill: s.fill,
@@ -481,7 +1091,7 @@ createApp({
         }))
       }, 'gap');
 
-      chartPriceInstance = renderLineChart(chartPriceCanvas.value, chartPriceInstance, {
+      renderLineChart('price', chartPriceCanvas.value, {
         labels,
         datasets: CHART_SERIES.price.map(s => ({
           label: s.label, borderColor: s.color, backgroundColor: 'transparent', fill: false,
@@ -515,12 +1125,12 @@ createApp({
         } else closeGaps.push(null);
       });
 
-      chartCrossInstance = renderLineChart(chartCrossCanvas.value, chartCrossInstance, {
+      renderLineChart('cross', chartCrossCanvas.value, {
         labels: sortedTimes.map(t => t.slice(11,19)),
-        datasets: [
-          { label: 'Cross Open Gap %', borderColor: '#00e676', backgroundColor: 'rgba(0,230,118,0.07)', fill: true, data: openGaps },
-          { label: 'Cross Close Gap %', borderColor: '#ff6b35', backgroundColor: 'rgba(255,107,53,0.07)', fill: true, data: closeGaps }
-        ]
+        datasets: [openGaps, closeGaps].map((data, i) => ({
+          label: CROSS_SERIES[i].label, borderColor: CROSS_SERIES[i].color,
+          backgroundColor: CROSS_SERIES[i].backgroundColor, fill: true, data
+        }))
       }, 'gap');
     }
 
@@ -537,38 +1147,102 @@ createApp({
         })
       }));
 
-      chartMultiInstance = renderLineChart(chartMultiCanvas.value, chartMultiInstance, {
+      renderLineChart('multi', chartMultiCanvas.value, {
         labels: sortedTimes.map(t => t.slice(11,19)),
         datasets
       }, 'price');
     }
 
-    function renderLineChart(canvas, instance, data, mode) {
-      if(!canvas) return null;
-      if(instance) {
-        instance.data = data;
-        instance.update('none');
-        return instance;
+    function applyHidden(key, data) {
+      data.datasets.forEach(d => { d.hidden = hiddenSeries.value[key].includes(d.label); });
+      return data;
+    }
+
+    function renderLineChart(key, canvas, data, mode) {
+      if(!canvas) return;
+      applyHidden(key, data);
+      const chart = charts[key];
+      if(chart) {
+        // 縮放/平移中仍持續更新：維持縮放寬度與「距離最新一筆」的位置，畫面隨新資料持續捲動
+        const view = chart.isZoomedOrPanned() ? captureView(chart) : null;
+        chart.data = data;
+        chart.update('none');
+        if(view) chart.zoomScale('x', viewRange(chart, view), 'none');
+        zoomed.value[key] = !!view;
+        return;
       }
-      return new Chart(canvas, {
+      const markZoomed = () => { if(charts[key]) zoomed.value[key] = charts[key].isZoomedOrPanned(); };
+      charts[key] = new Chart(canvas, {
         type: 'line', data,
         options: {
           responsive: true, maintainAspectRatio: false, animation: {duration: 0},
           interaction: {mode: 'index', intersect: false},
-          plugins: { legend: {display: false} },
+          elements: { point: {radius: 0, hoverRadius: 4, hitRadius: 6} },
+          plugins: {
+            legend: {display: false},
+            tooltip: {
+              filter: item => item.parsed.y != null,
+              itemSort: (a, b) => b.parsed.y - a.parsed.y,
+              callbacks: {
+                label: ctx => ` ${ctx.dataset.label}: ${mode==='gap' ? ctx.parsed.y.toFixed(4)+'%' : fmt(ctx.parsed.y)}`
+              }
+            },
+            zoom: {
+              pan: { enabled: true, mode: 'x', onPanComplete: markZoomed },
+              zoom: {
+                mode: 'x',
+                wheel: {enabled: true},
+                pinch: {enabled: true},
+                drag: {enabled: true, modifierKey: 'shift', backgroundColor: 'rgba(0,229,255,0.12)'},
+                onZoomComplete: markZoomed
+              }
+            }
+          },
           scales: {
             x: { ticks: {color: '#5a7090', font: {size: 9}}, grid: {color: 'rgba(26,37,64,0.3)'} },
             y: { ticks: {color: '#5a7090', font: {size: 9}, callback: v => mode==='gap' ? v.toFixed(3)+'%' : fmt(v)}, grid: {color: 'rgba(26,37,64,0.3)'} }
           }
         }
       });
+      canvas.addEventListener('dblclick', () => resetZoom(key));
     }
 
+    // 記錄目前檢視區間：寬度（幾筆）與右緣距離最新一筆的筆數
+    function captureView(chart) {
+      const last = chart.data.labels.length - 1, xs = chart.scales.x;
+      const min = Math.max(0, Math.round(xs.min)), max = Math.min(last, Math.round(xs.max));
+      return { width: max - min, fromLatest: last - max };
+    }
+
+    function viewRange(chart, view) {
+      const last = chart.data.labels.length - 1;
+      const max = Math.max(0, last - view.fromLatest);
+      return { min: Math.max(0, max - view.width), max };
+    }
+
+    function resetZoom(key) {
+      const chart = charts[key];
+      if(!chart) return;
+      zoomed.value[key] = false;
+      chart.resetZoom('none');
+      chart.update('none');
+    }
+
+    function toggleSeries(key, label) {
+      const list = hiddenSeries.value[key];
+      const i = list.indexOf(label);
+      if(i >= 0) list.splice(i, 1); else list.push(label);
+      const chart = charts[key];
+      if(chart) { applyHidden(key, chart.data); chart.update('none'); }
+    }
+    function isHidden(key, label) { return hiddenSeries.value[key].includes(label); }
+
+    // Spread Alert 固定比較「所有」交易所；後端只回傳該幣種在查詢區間內有資料的交易所
     async function fetchSpreadAlert() {
-      if (!multiExchanges.value.length || !multiSymbol.value) return;
+      if (!exchanges.value.length || !multiSymbol.value) return;
       try {
         const p = new URLSearchParams();
-        multiExchanges.value.forEach(e => p.append('exchange', e));
+        exchanges.value.forEach(e => p.append('exchange', e.id));
         p.append('symbol', multiSymbol.value);
         p.append('minutes', fetchMin.value);
         const r = await fetch(`/api/spread/alert?${p.toString()}`);
@@ -577,15 +1251,24 @@ createApp({
       } catch(e) {}
     }
 
+    // 各交易所 Ask 由低到高排序顯示
+    const sortedAsks = computed(() => {
+      const asks = (spreadAlert.value && spreadAlert.value.latest_asks) || {};
+      return Object.entries(asks).sort((a, b) => a[1] - b[1]);
+    });
+
     const crossGapAlert = computed(() => {
       const eidA = arbExchA.value, eidB = arbExchB.value;
       const dataA = multiData.value[eidA] || [];
       const dataB = multiData.value[eidB] || [];
       if (!dataA.length || !dataB.length) return null;
 
+      // API 回傳是「新到舊」，這裡改成「舊到新」，最後一筆才是目前值
+      const byTimeB = new Map(dataB.map(r => [r.Time, r]));
+      const rowsA = [...dataA].sort((a, b) => a.Time < b.Time ? -1 : a.Time > b.Time ? 1 : 0);
       const openGaps = [], closeGaps = [];
-      dataA.forEach(rA => {
-        const rB = dataB.find(r => r.Time === rA.Time);
+      rowsA.forEach(rA => {
+        const rB = byTimeB.get(rA.Time);
         if (rB) {
           if (rA.Spot_asks && rB.Contract_bids)
             openGaps.push((rB.Contract_bids - rA.Spot_asks) / rA.Spot_asks * 100);
@@ -600,16 +1283,26 @@ createApp({
       const avgClose = closeGaps.length ? closeGaps.reduce((a, b) => a + b, 0) / closeGaps.length : null;
       const curClose = closeGaps.length ? closeGaps[closeGaps.length - 1] : null;
 
+      // Open Gap 買進訊號：看「現值 − 均值」（百分點）
+      // 以畫面顯示的 4 位小數判斷，避免浮點誤差讓剛好 0.5% 被判成強力買
+      const devOpen = +(curOpen - avgOpen).toFixed(4);
+      const profitable = +curOpen.toFixed(4) > OPEN_SIGNAL.minGap;
+      const openSignal = !profitable ? 'hold'
+        : devOpen > OPEN_SIGNAL.strongBuy ? 'strong'
+        : devOpen > OPEN_SIGNAL.buy ? 'buy' : 'hold';
+
       return {
         curOpen: +curOpen.toFixed(4),
         avgOpen: +avgOpen.toFixed(4),
+        devOpen: +devOpen.toFixed(4),
+        openSignal,
         curClose: curClose !== null ? +curClose.toFixed(4) : null,
         avgClose: avgClose !== null ? +avgClose.toFixed(4) : null,
-        isAlertOpen: curOpen > avgOpen,
         isAlertClose: curClose !== null && avgClose !== null && curClose > avgClose,
         dataPoints: openGaps.length,
       };
     });
+
 
     // --- Helpers ---
     async function onExchangeChange() { await fetchSymbols(); fetchData(); }
@@ -628,8 +1321,8 @@ createApp({
 
     onMounted(async () => {
       await fetchExchanges(); await fetchSymbols();
-      fetchData(); fetchMultiData(); fetchSpreadAlert();
-      timer = setInterval(() => { fetchData(); fetchMultiData(); fetchSpreadAlert(); }, 1000);
+      refresh();
+      timer = setInterval(refresh, 1000);
       tickTimer = setInterval(tick, 1000);
       tick();
     });
@@ -640,12 +1333,16 @@ createApp({
       addExchangeId, searchText, tableData, dbStatus, dbStatusText, fetchMin, fetchMinutes, lastFetch, currentTime,
       chartGapCanvas, chartPriceCanvas, chartMultiCanvas, CHART_SERIES,
       filteredRows, pagedRows, currentPage, totalPages,
-      onExchangeChange, fetchData, fetchMultiData, fetchSpreadAlert, addMultiExchange, removeMultiExchange, getExchangeName, getExchangeColor, arbExchA, arbExchB, chartCrossCanvas,
-      spreadAlert, crossGapAlert,
+      onExchangeChange, fetchData, fetchMultiData, fetchSpreadAlert, addMultiExchange, selectAllMultiExchanges, removeMultiExchange, getExchangeName, getExchangeColor, arbExchA, arbExchB, chartCrossCanvas,
+      spreadAlert, sortedAsks, crossGapAlert, TABS, activeTab, setTab, refresh, SINGLE_SUBTABS, singleSub, CROSS_SUBTABS, crossSub, setCrossSub,
+      CROSS_SERIES, CHART_HINT, OPEN_SIGNAL, SIGNAL_TEXT, zoomed, resetZoom, toggleSeries, isHidden,
       sortBy, si, fmt, fmtGap, gapClass
     };
   }
-}).mount('#app');
+});
+app.component('signal-log', SignalLog);
+app.component('paper-trades', PaperTrades);
+app.mount('#app');
 </script>
 </body>
 </html>

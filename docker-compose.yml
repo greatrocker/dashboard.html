@@ -1,3 +1,27 @@
+# 前 20 大擴充的 REST Ticker 共用設定（bitget-ticker ~ pionex-ticker）
+x-rest-ticker: &rest-ticker
+  build: .
+  restart: unless-stopped
+  dns:
+    - 8.8.8.8
+    - 1.1.1.1
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-ticker-env: &ticker-env
+  TZ: Asia/Taipei
+  MSSQL_SERVER: ${MSSQL_SERVER}
+  MSSQL_DATABASE: ${MSSQL_DATABASE}
+  MSSQL_USER: ${MSSQL_USER}
+  MSSQL_PASSWORD: ${MSSQL_PASSWORD}
+  TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+
 services:
 
   exchange-api:
@@ -8,6 +32,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -32,6 +58,23 @@ services:
       - ./okx_api.py:/app/okx_api.py
       - ./mexc_api.py:/app/mexc_api.py
       - ./gate_api.py:/app/gate_api.py
+      - ./bitget_api.py:/app/bitget_api.py
+      - ./kucoin_api.py:/app/kucoin_api.py
+      - ./htx_api.py:/app/htx_api.py
+      - ./bingx_api.py:/app/bingx_api.py
+      - ./cryptocom_api.py:/app/cryptocom_api.py
+      - ./kraken_api.py:/app/kraken_api.py
+      - ./coinbase_api.py:/app/coinbase_api.py
+      - ./bitfinex_api.py:/app/bitfinex_api.py
+      - ./whitebit_api.py:/app/whitebit_api.py
+      - ./xt_api.py:/app/xt_api.py
+      - ./phemex_api.py:/app/phemex_api.py
+      - ./poloniex_api.py:/app/poloniex_api.py
+      - ./deepcoin_api.py:/app/deepcoin_api.py
+      - ./toobit_api.py:/app/toobit_api.py
+      - ./pionex_api.py:/app/pionex_api.py
+      - ./signals_api.py:/app/signals_api.py
+      - ./paper_api.py:/app/paper_api.py
 
   bybit-ticker:
     build: .
@@ -41,6 +84,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -71,6 +116,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -101,6 +148,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -131,6 +180,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -161,6 +212,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -182,6 +235,268 @@ services:
       - ./logs:/app/logs
       - ./config.py:/app/config.py
       - ./gate_ticker.py:/app/gate_ticker.py
+
+  bitget-ticker:
+    <<: *rest-ticker
+    container_name: bitget-ticker
+    command: python -u bitget_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: bitget
+      HEARTBEAT_PORT: "9005"
+    ports:
+      - "9005:9005"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./bitget_ticker.py:/app/bitget_ticker.py
+  kucoin-ticker:
+    <<: *rest-ticker
+    container_name: kucoin-ticker
+    command: python -u kucoin_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: kucoin
+      HEARTBEAT_PORT: "9006"
+    ports:
+      - "9006:9006"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./kucoin_ticker.py:/app/kucoin_ticker.py
+  htx-ticker:
+    <<: *rest-ticker
+    container_name: htx-ticker
+    command: python -u htx_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: htx
+      HEARTBEAT_PORT: "9007"
+    ports:
+      - "9007:9007"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./htx_ticker.py:/app/htx_ticker.py
+  bingx-ticker:
+    <<: *rest-ticker
+    container_name: bingx-ticker
+    command: python -u bingx_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: bingx
+      HEARTBEAT_PORT: "9008"
+    ports:
+      - "9008:9008"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./bingx_ticker.py:/app/bingx_ticker.py
+  cryptocom-ticker:
+    <<: *rest-ticker
+    container_name: cryptocom-ticker
+    command: python -u cryptocom_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: cryptocom
+      HEARTBEAT_PORT: "9009"
+    ports:
+      - "9009:9009"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./cryptocom_ticker.py:/app/cryptocom_ticker.py
+  kraken-ticker:
+    <<: *rest-ticker
+    container_name: kraken-ticker
+    command: python -u kraken_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: kraken
+      HEARTBEAT_PORT: "9010"
+    ports:
+      - "9010:9010"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./kraken_ticker.py:/app/kraken_ticker.py
+  coinbase-ticker:
+    <<: *rest-ticker
+    container_name: coinbase-ticker
+    command: python -u coinbase_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: coinbase
+      HEARTBEAT_PORT: "9011"
+    ports:
+      - "9011:9011"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./coinbase_ticker.py:/app/coinbase_ticker.py
+  bitfinex-ticker:
+    <<: *rest-ticker
+    container_name: bitfinex-ticker
+    command: python -u bitfinex_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: bitfinex
+      HEARTBEAT_PORT: "9012"
+    ports:
+      - "9012:9012"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./bitfinex_ticker.py:/app/bitfinex_ticker.py
+  whitebit-ticker:
+    <<: *rest-ticker
+    container_name: whitebit-ticker
+    command: python -u whitebit_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: whitebit
+      HEARTBEAT_PORT: "9013"
+    ports:
+      - "9013:9013"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./whitebit_ticker.py:/app/whitebit_ticker.py
+  xt-ticker:
+    <<: *rest-ticker
+    container_name: xt-ticker
+    command: python -u xt_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: xt
+      HEARTBEAT_PORT: "9014"
+    ports:
+      - "9014:9014"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./xt_ticker.py:/app/xt_ticker.py
+  phemex-ticker:
+    <<: *rest-ticker
+    container_name: phemex-ticker
+    command: python -u phemex_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: phemex
+      HEARTBEAT_PORT: "9015"
+    ports:
+      - "9015:9015"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./phemex_ticker.py:/app/phemex_ticker.py
+  poloniex-ticker:
+    <<: *rest-ticker
+    container_name: poloniex-ticker
+    command: python -u poloniex_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: poloniex
+      HEARTBEAT_PORT: "9016"
+    ports:
+      - "9016:9016"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./poloniex_ticker.py:/app/poloniex_ticker.py
+  deepcoin-ticker:
+    <<: *rest-ticker
+    container_name: deepcoin-ticker
+    command: python -u deepcoin_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: deepcoin
+      HEARTBEAT_PORT: "9017"
+    ports:
+      - "9017:9017"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./deepcoin_ticker.py:/app/deepcoin_ticker.py
+  toobit-ticker:
+    <<: *rest-ticker
+    container_name: toobit-ticker
+    command: python -u toobit_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: toobit
+      HEARTBEAT_PORT: "9018"
+    ports:
+      - "9018:9018"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./toobit_ticker.py:/app/toobit_ticker.py
+  pionex-ticker:
+    <<: *rest-ticker
+    container_name: pionex-ticker
+    command: python -u pionex_ticker.py
+    environment:
+      <<: *ticker-env
+      EXCHANGE: pionex
+      HEARTBEAT_PORT: "9019"
+    ports:
+      - "9019:9019"
+    volumes:
+      - ./logs:/app/logs
+      - ./config.py:/app/config.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./pionex_ticker.py:/app/pionex_ticker.py
+  # 跨交易所強力買偵測（所有交易所對 × 所有幣種，24 小時寫入 dbo.StrongBuySignals）
+  signal-detector:
+    <<: *rest-ticker
+    container_name: signal-detector
+    command: python -u signal_detector.py
+    environment:
+      <<: *ticker-env
+      HEARTBEAT_PORT: "9020"
+      WINDOW_MINUTES: "5"      # 逐秒精確計算的均值區間（分鐘）
+      WINDOWS: "5,15,30,60,240,720,1440"   # 同時偵測的均值區間（分鐘）；> 5 分鐘以每分鐘平均價計算
+      MIN_ROUND_TRIP: "-0.3"   # 獲利空間（Open Gap + Close Gap）>= -0.3%：兩邊買賣價差合計 <= 0.3% 才記錄
+      MAX_SPOT_SPREAD: "0.1"   # 現貨端 (Ask − Bid) / Bid <= 0.1%（擋洗盤 / 套利陷阱）
+      MAX_CONTRACT_SPREAD: "0.1"   # 合約端 (Ask − Bid) / Bid <= 0.1%
+      PAPER_WINDOW: "5"        # 模擬交易只跟這個均值區間的訊號開倉
+      STRONG_BUY_DEV: "0.5"    # 強力買門檻：Open Gap 偏離均值 > 0.5%
+      MIN_OPEN_GAP: "0.2"      # 且現在的 Open Gap > 0.2%（扣手續費後仍有利可圖）
+      MIN_CAPACITY_USD: "1000" # 且即時訂單簿可套利金額 >= 1000 USDT（過濾掛單太薄的交易所）
+      RECHECK_SECONDS: "30"    # 掛單不足的組合 30 秒後再查
+      MAX_CHECK_AGE: "5"       # 送出查訂單簿後超過 5 秒沒查到 → 丟棄該訊號，不用過時訊號開倉
+      BOOK_TIMEOUT: "4.5"      # 單次查訂單簿最多等 4.5 秒（需小於 MAX_CHECK_AGE）
+      MAX_INFLIGHT: "20"       # 同時查訂單簿的組合上限；有空位時依偏離大小優先
+      # 套利模擬交易：每筆強力買用盡可套利金額開倉，扣手續費後 >= +0.1% 或 Open Gap 回到均值即平倉
+      TAKE_PROFIT_PCT: "0.1"   # 停利：扣 4 筆手續費後淨報酬率（%）
+      SPOT_FEE: "0.001"        # 現貨手續費 0.1%
+      CONTRACT_FEE: "0.0005"   # 合約手續費 0.05%
+      MIN_POINTS: "30"         # 至少 30 筆配對資料才判斷
+      STALE_SECONDS: "10"      # 行情落後超過 10 秒的組合跳過
+    ports:
+      - "9020:9020"
+    volumes:
+      - ./logs:/app/logs
+      - ./exchange_api_common.py:/app/exchange_api_common.py
+      - ./rest_ticker_common.py:/app/rest_ticker_common.py
+      - ./orderbook_depth.py:/app/orderbook_depth.py
+      - ./paper_trader.py:/app/paper_trader.py
+      - ./signal_detector.py:/app/signal_detector.py
 
   uptime-kuma:
     image: louislam/uptime-kuma:1
